@@ -1,0 +1,81 @@
+// AUTH services
+import axios from 'axios';
+import api, { API_BASE_URL, setAuthTokens } from '../api';
+import { scheduleAccessRefresh, clearAccessRefresh } from '../../utils/accessScheduler';
+
+// עוזר קטן לשמור "מחובר" + מזהה משתמש
+function markSignedIn(user, accessToken, expirationTime) {
+  console.log("user", user);
+  console.log("accessToken", accessToken);
+  console.log("expirationTime", expirationTime)
+  setAuthTokens(accessToken, expirationTime);
+  scheduleAccessRefresh(accessToken);
+  console.log("done save token");
+  localStorage.setItem('isLoggedIn', '1');
+  if (user?._id) localStorage.setItem('user_id', user._id);
+  if (user?.roles) localStorage.setItem('roles', user.roles.join(',')); // assuming roles is an array
+}
+
+// רישום משתמש חדש (אם יש לך מסך הרשמה)
+/**
+ * 
+ * @param {*} tz |
+ * @param {*} from 
+ * @param {*} to 
+ * @returns 
+ */
+export async function register(payload) {
+  try{
+  const { data, status } = await api.post('/auth/register/', payload, { withCredentials: true });
+  if (![200,201].includes(status)) throw new Error(data?.message || 'ההרשמה נכשילה');
+  return {ok: true, message: data.message || 'User registered successfully'};
+  }catch(err){
+    console.error('Register error:', err?.response?.data || err.message);
+    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+  }
+}
+
+// התחברות עם תעודת זהות + סיסמה
+export async function login(tz, password) {
+  const { data, status } = await api.post('/auth/login', { tz, password }, { withCredentials: true });
+  console.log("login", status, data);
+  if (![200,201].includes(status) || !data?.ok) throw new Error(data?.message || 'ההתחברות נכשילה');
+
+  const { accessToken, expirationTime, user } = data;
+  markSignedIn(user, accessToken, expirationTime);
+  return user;
+}
+
+// רענון חד-פעמי ידני (בד"כ לא צריך לקרוא ידנית; ה־interceptor/‏PublicOnly עושה את זה)
+export async function refresh() {
+  const { data, status } = await axios.post(`${API_BASE_URL}/auth/refresh`, null, { withCredentials: true });
+  if (![200,201].includes(status) || !data?.ok || !data?.accessToken) throw new Error('ההתחברות מחדש נכשלה');
+  setAuthTokens(data.accessToken, data.expirationTime);
+  scheduleAccessRefresh(data.accessToken);
+  return { accessToken: data.accessToken, expirationTime: data.expirationTime };
+}
+
+// זהות עצמי (משתמש מחובר)
+export async function getMe() {
+  try{
+  const { data, status } = await api.get('/auth/me');
+  if (![200,201].includes(status) || !data?.ok) throw new Error(data?.message || 'אין זהות משתמש');
+  return data.user; // הקומפוננטות אצלך מצפות ל-user ישירות
+  }catch(err){
+    console.warn("err getme", err);
+    throw err;
+  }
+}
+
+// התנתקות
+export async function logout() {
+  try {
+    await api.post('/auth/logout', null, { withCredentials: true });
+  } catch {}
+  clearAccessRefresh();
+  setAuthTokens(null);
+  localStorage.clear();
+  localStorage.setItem('LOGOUT_BROADCAST', String(Date.now()));
+  // אפשר להשאיר לראוטר לנווט, או לבצע redirect קשיח:
+  window.location.assign('/');
+}
