@@ -304,93 +304,9 @@ export default function ViewAllLesson() {
   return (
     <div>
       <span ref={topAnchorRef} className={styles.fabAnchor} aria-hidden="true" />
-      <h1 className={styles.title}>מערכת שעות החודש הנבחר ({currentMonthInfo.label})</h1>
+      <h1 className={styles.title}>برنامج الدروس</h1>
 
-      <div className={styles.monthControls}>
-        <button className={styles.navBtn}
-          onClick={() => { const next=(Number(localStorage.getItem("monthOffset"))||0)+1; localStorage.setItem("monthOffset",next); setMonthOffset(v=>v+1); }}>
-          חודש אחרי
-        </button>
-        <button className={styles.navBtn} style={{backgroundColor: "greenyellow"}}
-          onClick={() => { localStorage.setItem("monthOffset",0); setMonthOffset(0); }}>
-          חודש נוכחי
-        </button>
-        <button className={styles.navBtn}
-          onClick={() => { const prev=(Number(localStorage.getItem("monthOffset"))||0)-1; localStorage.setItem("monthOffset",prev); setMonthOffset(v=>v-1); }}>
-          חודש קודם
-        </button>
-      </div>
-
-      <div className={styles.monthControls}>
-          {localStorage.getItem("roles").includes("ادارة") && (
-            <>
-              {/* <button className={styles.addBtn} onClick={() => setCanEdit(!canEdit)}>
-                {canEdit ? "בטל שינויים" : "אפשיר שינויים"}
-              </button> */}
-
-              <button
-                className={styles.addBtn}
-                style={{ background: "#60d394" }} // ירוק עדין
-                onClick={async () => {
-                  try {
-                    // אפשר גם לפתוח מודאל ולתת לבחור אופציות; כאן דיפולט:
-                    const now = new Date();
-                    const params = {
-                      fromMonth: now.getMonth()+1,
-                      fromYear:  now.getFullYear(),
-                      // אפשר להשאיר ריק – השרת יחשב month+1/year
-                      overwrite: false,       // true כדי למחוק כפילויות ביעד
-                      keepTrainees: false,    // true כדי לשכפל משתתפים
-                      // teacherOnly: localStorage.getItem('user_id'), // אופציונלי: רק המאמן הנוכחי
-                    };
-                    const res = await copyLessonsMonth(params);
-                    if (res.ok) {
-                      toast.success(`הועתקו ${res.copied || 0} שיעורים. דולגו ${res.skipped || 0}.`);
-                      // רענון
-                      await loadData();
-                      // מעבר לחודש הבא כדי לראות:
-                      const next = (Number(localStorage.getItem("monthOffset"))||0) + 1;
-                      localStorage.setItem("monthOffset", next);
-                      setMonthOffset(v => v + 1);
-                    } else {
-                      toast.error(res.message || 'שגיאה בהעתקה');
-                    }
-                  } catch (e) {
-                    console.error("copy error", e);
-                    toast.error('שגיאה בהעתקה');
-                  }
-                }}
-              >
-                העתק לחודש הבא
-              </button>
-
-              <button
-                className={styles.addBtn}
-                style={{ background: "#f77676" }} // אדום עדין
-                onClick={async () => {
-                  if (!window.confirm('האם למחוק את כל השיעורים בחודש זה? פעולה זו לא ניתנת לביטול.')) return;
-                  try {
-                    const res = await deleteLessonsPerMonth(currentMonthInfo.month, currentMonthInfo.year);
-                    if (res.ok) {
-                      toast.success(`נמחקו ${res.deleted || 0} שיעורים.`);
-                      // רענון
-                      await loadData();
-                    } else {
-                      toast.error(res.message || 'שגיאה במחיקה');
-                    }
-                  } catch (e) {
-                    console.error("delete error", e);
-                    toast.error('שגיאה במחיקה');
-                  }
-                }}
-              >
-                מחק כל השיעורים בחודש
-              </button>
-            </>
-          )}
-
-      </div>
-
+      
       {isLoading ? (
         <div className={styles.loaderWrap}>
           <div />{/* spacer */}

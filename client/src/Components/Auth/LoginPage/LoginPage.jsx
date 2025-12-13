@@ -55,9 +55,9 @@ export default function LoginPage() {
 
     return (
         <div className={styles.container}>
-            <div className={styles.leftPanel}>
+            <div className={styles.leftPanel} style={{backgroundColor: "#9BBFB6"}}>
                 <div className={styles.welcomeText}>
-                    <h2>התחברות</h2>
+                <img src={LogoIMG} alt="جمعية تمهيد" />
                 </div>
             </div>
             <div className={styles.rightPanel}>
