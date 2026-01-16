@@ -64,7 +64,6 @@ export function ToastProvider({ children, rtl = true, baseZIndex = 50 }) {
   // חבר את ה־API הגלובלי ונקז תור
   useEffect(() => {
     toast._push = (t) => {
-      console.log("[SystemToasts] push", t);
       return push(t);
     };
     if (_queue.length) for (const t of _queue.splice(0)) push(t);
@@ -181,7 +180,6 @@ function ToastItem({ t, onClose }) {
           {t.description && <div className={styles.toastDesc}>{t.description}</div>}
         </div>
 
-        {/* ⏱️ טיימר טקסטואלי מימין לכפתור הסגירה */}
         <div className={styles.toastTimer} aria-label="נותר">
           {formatMMSS(remaining)}
         </div>
@@ -189,7 +187,6 @@ function ToastItem({ t, onClose }) {
         <button onClick={onClose} aria-label="סגירה" className={styles.toastClose}>×</button>
       </div>
 
-      {/* פס התקדמות בתחתית הכרטיס */}
       {(
         <div className={styles.progressBar} aria-hidden="true">
           <div className={styles.progressFill} style={{ width: `${pct}%` }} />
@@ -203,7 +200,6 @@ function ToastItem({ t, onClose }) {
 // ---------- Watcher: Health + Token ----------
 export function SystemStatusWatcher({ options }) {
   const { push } = useToast();
-  console.log("SystemStatusWatcher options:", options);
   const healthUrl = options?.healthUrl || "/api/health";
   const intervalMs = options?.intervalMs || 30000;
   const getToken = options?.getToken || (() => (typeof window !== "undefined" ? localStorage.getItem("accessToken") : null));
@@ -214,12 +210,11 @@ export function SystemStatusWatcher({ options }) {
     let fails = 0;
     const check = async () => {
       try {
-        console.log(api);
         const r = await api.get(healthUrl);
         if (!r.data.ok) throw new Error(String(r.status));
         emitHealth(true);
         if (mounted && fails > 0) {
-          push({ variant: "success", description: "✅ חזר חיבור השרת", duration: 3000 });
+          push({ variant: "success", description: "✅ يوجد ربط بالخادم", duration: 3000 });
 
           fails = 0;
         }
@@ -227,7 +222,7 @@ export function SystemStatusWatcher({ options }) {
         emitHealth(false);
         fails++;
         if (mounted && fails === 1) {
-          push({ variant: "warning", sticky: true, description: "⚠️ אין חיבור לשרת כרגע. ננסה שוב ברקע.", duration: 10000 });
+          push({ variant: "warning", sticky: true, description: "لا يوجد ربط بالخادم, انتظر إعادة الربط", duration: 10000 });
         }
       }
     };
@@ -245,10 +240,10 @@ export function SystemStatusWatcher({ options }) {
       const now = Math.floor(Date.now() / 1000);
       const left = exp - now;
       if (left <= 0) {
-        push({ variant: "destructive", sticky: true, description: "⛔ התוקף פג – נא להתחבר מחדש." });
+        push({ variant: "destructive", sticky: true, description: "⛔ زمان استخدام الحساب منتهي الصلاحية, سجل دخولك مرة اخرة" });
       } else if (left < warnBeforeExpirySec) {
         const min = Math.max(1, Math.floor(left / 60));
-        push({ variant: "info", description: `ℹ️ התוקף יפוג בעוד ~${min} ד׳. רענון/כניסה מחדש מומלצים.` });
+        push({ variant: "info", description: `ℹ️ زمن الاستخدامك للنظام سينتهي صلاحيته ~${min} د.` });
       }
     };
     const id = window.setInterval(checkExp, 20000);

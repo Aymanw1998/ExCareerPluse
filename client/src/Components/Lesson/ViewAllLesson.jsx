@@ -149,9 +149,9 @@ function DesktopTimeline({ lessons, canEdit, currentMonth, currentYear, showMyLe
 }
 
 /* === מובייל + מעטפת === */
-function ScheduleView({ lessons, canEdit, currentMonth, currentYear, showMyLessons, navigate, onReload, setTooltip }) {
+function ScheduleView({ room, lessons, canEdit, currentMonth, currentYear, showMyLessons, navigate, onReload, setTooltip }) {
   const [teacherNames, setTeacherNames] = useState({});
-
+  useEffect(()=>console.log("ScheduleView", room, lessons))
   useEffect(() => {
     // טעינת שמות מאמנים (אופציונלי)
     const load = async () => {
@@ -185,13 +185,14 @@ function ScheduleView({ lessons, canEdit, currentMonth, currentYear, showMyLesso
 
   return (
     <div className={styles.scheduleContainer}>
+      <h1>قائمة الدروس للغرفة {room}</h1>
       {/* מובייל */}
       <div className={styles.mobileView}>
         { (
           <button id="page-add-lesson" className={styles.addBtn}
                   style={{backgroundColor: "greenyellow"}}
-                  onClick={() => navigate(`/lessons/new?month=${currentMonth}&year=${currentYear}`)}>
-            הוסף שיעור
+                  onClick={() => navigate(`/lessons/new?month=${currentMonth}&year=${currentYear}&room=${room}`)}>
+                    {"اضافة درس للاسبوع"}
           </button>
         )}
 
@@ -200,17 +201,18 @@ function ScheduleView({ lessons, canEdit, currentMonth, currentYear, showMyLesso
                onClick={() => navigate(`/lessons/${l._id}`)}
                onMouseEnter={() => setTooltip?.({ show:true, content:(
                  <>
-                   <div style={{display:'flex',gap:4}}><span>🧑‍🏫</span><span>שיעור:</span><span>{l.name}</span></div>
-                   <div style={{display:'flex',gap:4}}><span>🕒</span><span>שעה:</span><span>{toHHMM(getStart(l))}–{toHHMM(getEnd(l))}</span></div>
-                   <div style={{display:'flex',gap:4}}><span>📅</span><span>יום:</span><span>{dayNames[(l.date.day)-1]}</span></div>
+                   <div style={{display:'flex',gap:4}}><span>🧑‍🏫</span><span>اسم:</span><span>{l.name}</span></div>
+                   <div style={{display:'flex',gap:4}}><span>🕒</span><span>ساعة:</span><span>{toHHMM(getStart(l))}–{toHHMM(getEnd(l))}</span></div>
+                   <div style={{display:'flex',gap:4}}><span>📅</span><span>يوم:</span><span>{dayNames[(l.date.day)-1]}</span></div>
+                    <div style={{display:'flex',gap:4}}><span>📅</span><span>غرفة:</span><span>{(l?.room || "لا يوجد")}</span></div>
                  </>
                )})}
                onMouseLeave={() => setTooltip?.({ show:false })}
           >
-            <p><strong>שיעור:</strong> {l.name}</p>
-            <p><strong>יום:</strong> {dayNames[(l.date.day)-1]}</p>
-            <p><strong>שעה:</strong> {toHHMM(getStart(l))}–{toHHMM(getEnd(l))}</p>
-            {/* <p><strong>מאמן:</strong> {teacherNames[l.teacher] || 'טוען...'}</p> */}
+<div style={{display:'flex',gap:4}}><span>🧑‍🏫</span><span>اسم:</span><span>{l.name}</span></div>
+                   <div style={{display:'flex',gap:4}}><span>🕒</span><span>ساعة:</span><span>{toHHMM(getStart(l))}–{toHHMM(getEnd(l))}</span></div>
+                   <div style={{display:'flex',gap:4}}><span>📅</span><span>يوم:</span><span>{dayNames[(l.date.day)-1]}</span></div>
+                    <div style={{display:'flex',gap:4}}><span>📅</span><span>غرفة:</span><span>{(l?.room || "لا يوجد")}</span></div>            {/* <p><strong>מאמן:</strong> {teacherNames[l.teacher] || 'טוען...'}</p> */}
           </div>
         ))}
       </div>
@@ -225,18 +227,17 @@ function ScheduleView({ lessons, canEdit, currentMonth, currentYear, showMyLesso
           showMyLessons={showMyLessons}
           navigate={navigate}
           onReload={onReload}
-          onHover={(lOrCmd, time, day) => {
-            if (lOrCmd === '__move__') return; // מטופל מלמעלה
-            if (!lOrCmd) return setTooltip({ show:false });
+          onHover={(l, time, day) => {
+            if (l === '__move__') return; // מטופל מלמעלה
+            if (!l) return setTooltip({ show:false });
             setTooltip({
               show: true,
               content: (
                 <>
-                  <div style={{display:'flex',gap:4}}><span>🧑‍🏫</span><span>שיעור:</span><span>{lOrCmd.name}</span></div>
-                  <div style={{display:'flex',gap:4}}><span>🕒</span><span>שעה:</span><span>{time}</span></div>
-                  <div style={{display:'flex',gap:4}}><span>📅</span><span>יום:</span><span>{day}</span></div>
-                  <div style={{display:'flex',gap:4}}><span>👨‍👨‍👦‍👦</span><span>משתתפים:</span><span>{lOrCmd.list_students?.length ?? 0}</span></div>
-                </>
+                  <div style={{display:'flex',gap:4}}><span>🧑‍🏫</span><span>اسم:</span><span>{l.name}</span></div>
+                  <div style={{display:'flex',gap:4}}><span>🕒</span><span>ساعة:</span><span>{toHHMM(getStart(l))}–{toHHMM(getEnd(l))}</span></div>
+                  <div style={{display:'flex',gap:4}}><span>📅</span><span>يوم:</span><span>{dayNames[(l.date.day)-1]}</span></div>
+                  <div style={{display:'flex',gap:4}}><span>📅</span><span>غرفة:</span><span>{(l?.room || "لا يوجد")}</span></div>                </>
               )
             });
           }}
@@ -269,7 +270,22 @@ export default function ViewAllLesson() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [lessons, setLessons] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const loadRooms = () => {
+    const rms = (lessons || []).reduce((acc, curr) => {
+      const roomKey = curr?.room ?? 0;
+      (acc[roomKey] ??= []).push(curr); 
+      return acc;
+    }, {});
+    const sorted = Object.fromEntries(
+      Object.entries(rms).sort(([a], [b]) => Number(a) - Number(b))
+    );
+
+    setRooms(sorted);
+  };
+  useEffect(()=>console.log("rooms",rooms),[rooms])
   useEffect(() => console.log("lessons ", lessons), [lessons]);
+  useEffect(()=>{lessons && lessons.length > 0 && loadRooms()},[lessons])
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -313,8 +329,10 @@ export default function ViewAllLesson() {
           {[...Array(7)].map((_,i)=><div key={i} className={styles.loaderBox} />)}
         </div>
       ) : (
-        <ScheduleView
-          lessons={lessons}
+        Object.entries(rooms).map(([roomId, roomLessons]) => {
+          return <ScheduleView
+          room={roomId}
+          lessons={roomLessons}
           canEdit={canEdit}
           currentMonth={currentMonthInfo.month}
           currentYear={currentMonthInfo.year}
@@ -323,6 +341,7 @@ export default function ViewAllLesson() {
           onReload={loadData}
           setTooltip={(t)=> setTooltipInfo(prev => ({ ...prev, ...t }))}
         />
+        })
       )}
 
       {tooltipInfo.show && (

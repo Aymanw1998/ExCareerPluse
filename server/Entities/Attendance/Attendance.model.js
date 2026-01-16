@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
-const Lesson = require('../Lesson/Lesson.model');
 
 // Define the Meeting Schema
 const schema = new mongoose.Schema({
-    id: { type: String, required: true },    
+    id: { type: String },    
     lesson: {
         type: mongoose.Schema.Types.ObjectId, // lesson
         ref: 'Lessons',
@@ -12,13 +11,23 @@ const schema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, //students
         ref: 'Students',
     },
-    status: { type: Boolean, default: false, required: true },
+    dateKey: { type: Number, index: true },
+    status: { type: String, enum:["حاضر","غائب","متأخر"], default: "حاضر", required: true },
     day: { type: Number, required: true, min: 1, max: 31 }, // 0=Sun..6=Sat
     month: { type: Number, required: true, min: 1, max: 12 }, // 0..23
     year: {type: Number, required: true},
+    notes: { type: String, trim: true, default: "" },
 
-},{timeseries: true});
+},{timestamps: true});
 
+schema.index({ lesson: 1, student: 1, dateKey: 1 }, { unique: true });
+schema.index({ student: 1, dateKey: -1 });
+schema.index({ lesson: 1, dateKey: -1 });
+
+schema.pre("save", function(next) {
+  this.dateKey = this.year * 10000 + this.month * 100 + this.day;
+  next();
+});
 // Create the Meeting model
 const Attendance = mongoose.model('Attendances', schema);
 

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { StudentInterface } = require('../Person/Person.interface');
 
 const StudentSchema = new mongoose.Schema({...StudentInterface,
+    main_teacher: {type:mongoose.Schema.Types.ObjectId, ref: 'Users', default: null},
     source: {type: String, enum:['جمعية', 'اهل'], default: 'جمعية'},
     status: {type: String, enum:['عادي', 'ينتظر'], default: 'عادي'}
 }, {timestamps: true} );

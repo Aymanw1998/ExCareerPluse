@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 // עדכן את הנתיב לפי המבנה שלך:
-import { generatePDF, getAll, /*softDelete fallback: deleteS */ } from "../../WebServer/services/user/functionsUser.jsx";
+import { changeStatus, generatePDF, getAll, /*softDelete fallback: deleteS */ } from "../../WebServer/services/user/functionsUser.jsx";
 import styles from "./User.module.css";
 
 import Fabtn from "../Global/Fabtn/Fabtn.jsx"
 import { toast } from "../../ALERT/SystemToasts.jsx";
 import { createLink } from "../../WebServer/services/inviteToken/functionInviteToken.jsx";
 import { ask, setGlobalAsk } from "../Provides/confirmBus.js";
+import UserStatusFilter from "./UserStatusFilter.jsx";
 
 const ViewAllUser = () => {
   const topAnchorRef = useRef(null);
@@ -26,7 +27,7 @@ const ViewAllUser = () => {
     }, []);
   
   const navigate = useNavigate();
-  const [students, setStudents] = useState([]);
+  const [users, setusers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");      // "name" | "price"
   const [sortDir, setSortDir] = useState("asc");           // "asc" | "desc"
@@ -44,9 +45,9 @@ const ViewAllUser = () => {
       if (data && data.length > 0) {
         console.log("getAllUser", data)
         const filtered = data;
-        setStudents(filtered);
+        setusers(filtered);
       } else {
-        setStudents([]);
+        setusers([]);
       }
     } catch (e) {
       console.error("שגיאה בהבאת האימונים", e);
@@ -55,20 +56,22 @@ const ViewAllUser = () => {
       setLoading(false);
     }
   }, []);
-
+  const [status, setStatus] = useState('active'); // 'active' | 'pending' | 'inactive'
   useEffect(() => { loadStudent(); }, [loadStudent]);
-  const sortedFilteredStudents = useMemo(() => {
+  
+  const sortedFilteredusers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
-    const filtered = q
-      ? students.filter(s =>
+    const filtered0 = q
+      ? users.filter(s =>
           [s.tz, s.firstname, s.lastname, s.father_name, new Date().getFullYear() - new Date(s.birth_date).getFullYear(), ]
             .map(v => String(v ?? "").toLowerCase())
             .join(" ")
             .includes(q)
         )
-      : students;
-
+      : users;
+    console.log(filtered0, status);
+    const filtered = filtered0.filter(s=> s.room == status)
     const dirMul = sortDir === "asc" ? 1 : -1;
 
     return [...filtered].sort((a, b) => {
@@ -82,50 +85,54 @@ const ViewAllUser = () => {
       const bn = String(b.name ?? "");
       return an.localeCompare(bn, "he", { sensitivity: "base" }) * dirMul;
     });
-  }, [students, searchTerm, sortField, sortDir]);
+  }, [users, searchTerm, sortField, sortDir, status]);
 
   const handleAddStudent = async() => {
-    let toParent;
+    navigate("/users/new");         // נתיב כמו שיש לך היום (תעדכני אם שונה)
+  }
+  
+  const counts = useMemo(() => {
+    let active = 0, pending = 0, inactive = 0;
+    for (const u of users) {
+      if (u.room === 'waiting') pending++;
+      else if (u.room === 'noActive') inactive++;
+      else active++;
+    }
+    return { active, pending, inactive };
+  }, [users]);
 
+
+  //ROOMS
+  const onWaitingToActive = async (user) => {
     try {
-      toParent = await ask("",{
-        title: "طريقة الإضافة",
-        message:
-          "كيف تفضلي إضافة الطالب؟\n\n" +
-          "(1) إرسال رابط تعبئة إلى ولي الأمر\n" +
-          "(2) أو إدخال يدوي عبر النظام",
-        confirmText: "إرسال رابط",
-        cancelText: "إضافة يدوية",
-      });
-    } catch (e) {
-      console.error("ask error:", e);
-      toast.error("חלון האישור לא מוכן (Confirm not ready yet)");
-      return;
+    await changeStatus(user.tz, 'waiting', 'active');
+    window.location.reload();
+    toast.success("המשתמש אושר בהצלחה");
+    } catch(err) { 
+      console.error(err); 
+      toast.error("שגיאה באישור המשתמש");
     }
-
-    // ❌ המורה בחרה "ביטול" → כניסה למסך יצירה ידנית
-    if (!toParent) {
-      navigate("/users/new");         // נתיב כמו שיש לך היום (תעדכני אם שונה)
-      return;
-    }
-
-    // ✅ יצירת קישור להורה
-    const res = await createLink();
-    if (!res.url) {
-      toast.error(res.message);
-      return;
-    }
-
-    // להעתיק אוטומטית ללוח
+  }
+  const onNoActiveToActive = async (user) => {
     try {
-      await navigator.clipboard.writeText(res.url);
-      toast.success("✅ נוצר קישור ונעתק ללוח. שלחי אותו להורה בוואטסאפ / מייל.");
-    } catch {
-      toast.success("✅ נוצר קישור. העתקי ושלחי להורה:");
-      alert(res.url); // גיבוי אם אין גישה ל־clipboard
+    await changeStatus(user.tz, 'noActive', 'active');
+    window.location.reload();
+    toast.success("המשתמש שוחזר בהצלחה");
+    } catch(err) { 
+      console.error(err); 
+      toast.error("שגיאה בשחזור המשתמש");
     }
-
-    // navigate("/students/new");
+  }
+  const deleteU = async (user, from) => {
+    try{
+    console.log("deleteU", user.tz, from);
+    await deleteUser(user.tz, from);
+    window.location.reload();
+    toast.success("המשתמש נמחק בהצלחה");
+    } catch(err) { 
+      console.error(err); 
+      toast.error("שגיאה במחיקת המשתמש");
+    }
   }
   return (
     <div>
@@ -148,7 +155,7 @@ const ViewAllUser = () => {
             style={{ backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white' }}
             onClick={handleAddStudent}
           >
-            ➕ أضافة طالب جديد
+            ➕ أضافة مستخدم جديد
           </button>
 
           <button
@@ -159,8 +166,17 @@ const ViewAllUser = () => {
             {loading ? "جاري التحديث" : "🔄 تحديث القائمة"}
           </button>
         </div>
+        <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <UserStatusFilter
+            value={status}
+            onChange={setStatus}
+            counts={counts}      // תגים עם ספירה לכל מצב
+            compact={false}      // אפשר true לגרסה קומפקטית
+          />
+        </div>
+
         <div style={{ marginTop: 8, opacity: 0.7 }}>
-        مجموع: {sortedFilteredStudents && sortedFilteredStudents.length > 0 ? sortedFilteredStudents.length: 0} المستخدمين
+        مجموع: {sortedFilteredusers && sortedFilteredusers.length > 0 ? sortedFilteredusers.length: 0} المستخدمين {status === 'active' ? 'مُفاعلين' : status === 'pending' ? 'بالانتظار' : 'حسابات موقوفة'}
       </div>
       </div>
 
@@ -175,22 +191,44 @@ const ViewAllUser = () => {
               <th>اسم المستخدم</th>
               <th>العمر</th>
               <th>الجنس</th>
+              <th>الدور</th>
               <th>للمعلومات</th>
             </tr>
           </thead>
           <tbody>
-            {sortedFilteredStudents.length > 0 ? (
-              sortedFilteredStudents.map((t) => (
+            {sortedFilteredusers.length > 0 ? (
+              sortedFilteredusers.map((t) => (
                 <tr key={t._id}>
                   <td data-label="رقم الهوية">{t.tz}</td>
                   <td data-label="اسم المستخدم">{t.firstname + " " + t.lastname}</td>
                   <td data-label="العمر">{new Date().getFullYear() - new Date(t.birth_date).getFullYear()}</td>
                   <td data-label="الجنس">{t.gender}</td>
+                  <td data-label="الدور">{t.roles.join(", ")}</td>
                   <td data-label="للعملومات">
-                    <button style={{ backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
-                    onClick={() => navigate(`/users/${t.tz}`)}>اضغط هنا</button>
-                    <button style={{ backgroundColor: 'blue', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
-                    onClick={() => generatePDF(t.tz)}>تحميل ملف المستخدم</button>
+                    { t.room != "waiting" && t.room != "noActive" &&
+                      <>
+                        <button style={{ backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
+                        onClick={() => navigate(`/users/${t.tz}`)}>اضغط هنا</button>
+                        {/* <button style={{ backgroundColor: 'blue', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
+                        onClick={() => generatePDF(t.tz)}>تحميل ملف المستخدم</button> */}
+                      </>
+                    }
+                    { t.room == "waiting" && 
+                      <>
+                        <button style={{ backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
+                        onClick={async() => await onWaitingToActive(t)}>✅ موافقة</button>
+                        <button style={{ backgroundColor: 'red', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
+                        onClick={() => deleteU(t, 'waiting')}>🗑️ حذف</button>
+                      </>
+                    }
+                    { t.room == "noActive" &&
+                      <>
+                        <button style={{ backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }}
+                        onClick={async() => await onNoActiveToActive(t)}>♻️ تفعيل</button>
+                        <button style={{ backgroundColor: 'red', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }}
+                        onClick={() => deleteU(t, 'noActive')}>🗑️ حذف</button>
+                      </>
+                    }
                   </td>
                 </tr>
               ))

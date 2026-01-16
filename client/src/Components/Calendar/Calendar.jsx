@@ -1,27 +1,32 @@
 //Calendar.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { toast as createToast, useToast as useSystemToast } from "../../ALERT/SystemToasts";
+import { toast as createToast, toast, useToast as useSystemToast } from "../../ALERT/SystemToasts";
 import styles from "./Calendar.module.css";
 import {getAllLesson} from "../../WebServer/services/lesson/functionsLesson.jsx";
-import { getAll as getAllStudent } from "../../WebServer/services/student/functionStudent.jsx";
+import { getAll as getAllStudent } from "../../WebServer/services/student/functionsStudent.jsx";
 import { 
   getAllByLessonDayMonthYear as getAllAByLDMY,
   createAttendanceByList as createAllAByLDMYSs,
- } from "../../WebServer/services/attendance/functionsAttendance.jsx";
+  } from "../../WebServer/services/attendance/functionsAttendance.jsx";
+// import ReportEditor from "../Editor/OnlyOffice/ReportWordPage.jsx";
+import { useNavigate } from "react-router-dom";
 export const Calendar = () => {
+
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   // Popup states
   const [showPopup, setShowPopup] = useState(false);
   const [showPopup2, setShowPopup2] = useState(false);
+  const [showPopup3, setShowPopup3] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedDayEvents, setSelectedDayEvents] = useState([]);
-
+  console.log("selectedDayEvents", selectedDayEvents);
   const [selectedLesson, setSelectedLesson] = useState({});
-
+  console.log("selectedLesson", selectedLesson);
   const [students, setStudents] = useState([]);
   console.log("students", students);
   const [attendances, setAttendances] = useState([]);
@@ -82,6 +87,7 @@ export const Calendar = () => {
     }catch(err){
       console.error("Error fetching events for date", dateKey, err);
       push(createToast("error", "حدث خطأ أثناء جلب الأحداث", { duration: 3000 }));
+      toast.error("حدث خطأ أثناء جلب الأحداث", { duration: 3000 });
     }
   };
 
@@ -118,13 +124,19 @@ export const Calendar = () => {
       const allAttendances = attendanceResponse.attendances.length > 0 ? attendanceResponse.attendances : defaultAttendances;
       setAttendances(allAttendances);
 
-      setShowPopup2(true);
+      setShowPopup3(true);
     }catch(err){
       console.error("Error fetching students for attendance", err);
       // push(createToast("error", "حدث خطأ أثناء جلب الطلاب", { duration: 3000 }));
+      toast.error("حدث خطأ أثناء جلب الطلاب", { duration: 3000 });
     }
   };
     
+  const openReport = async(lesson, date) => {
+    setSelectedLesson(lesson);
+    console.log("openReport for", lesson, date);
+    window.open('/report-editor/'+`${date}_${lesson.name}`, '_blank')
+  };
 
   const saveAttendance = async(lesson, date) => {
     console.log("createAttendanceListForLesson for", lesson, date);
@@ -142,17 +154,17 @@ export const Calendar = () => {
       const createResponse = await createAllAByLDMYSs(lesson._id, day, month, year, attendanceList);
       console.log("createResponse", createResponse);
       if (!createResponse?.ok) throw new Error(createResponse?.message || 'خطأ في إنشاء الحضور');
-      push({type:"success", message: "تم إنشاء قائمة الحضور بنجاح",  duration: 2500 });
+      toast.success("تم حفظ قائمة الحضور والغياب بنجاح", { duration: 2500 });
     }catch(err){
       console.error("Error creating attendance list", err);
-      push({type: "error", message: "حدث خطأ أثناء إنشاء قائمة الحضور", duration: 3000 });
+      // push({type: "error", message: "حدث خطأ أثناء إنشاء قائمة الحضور", duration: 3000 });
+      toast.error("حدث خطأ أثناء إنشاء قائمة الحضور", { duration: 3000 });
     }
   };
 
-  const openLesson = async(dateKey, ev) => {
-    console.log("openDayEvents for", dateKey,ev);
-
-    openAttendance(ev, dateKey);
+  const openLesson = async(lesson) => {
+    setShowPopup2(true);
+    setSelectedLesson(lesson);
   };
 
 
@@ -239,7 +251,7 @@ export const Calendar = () => {
               <ul className={styles.eventList}>
                 {selectedDayEvents.map((ev, i) => (
                   <li key={i}>
-                    <button className={styles.addButton} onClick={()=>openLesson(selectedDate, ev)}>
+                    <button className={styles.addButton} onClick={()=>openLesson(ev)}>
                     ساعة: {parseInt(Math.floor(ev.date.startMin/60))}:{String(ev.date.startMin%60).padStart(2, "0")} {" --> "} {ev.name}
             </button>
                   </li>
@@ -253,15 +265,39 @@ export const Calendar = () => {
         </div>
       )}
 
-      {/*  قائمة الحضور والغياب */}
-      {showPopup2 && attendances.length > 0 && (
+      {/*  اختيار بين التقرير او الحضور والغياب */}
+      {showPopup2 && (
         <div className={styles.popupOverlay} onClick={() => setShowPopup2(false)}>
           <div
             className={styles.popup}
             dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className={styles.popupTitle}> {selectedLesson.name} - حضور وغياب - {selectedDate}</h3>
+            <h3 className={styles.popupTitle}> اختر ما تريد القيام به:</h3>
+            <p style={{color: "gray"}}>التاريخ: {selectedDate}, الدرس: {selectedLesson.name}</p>
+            <button className={styles.addButton} onClick={() => {setShowPopup2(false); openAttendance(selectedLesson, selectedDate);}}>
+              إدارة الحضور والغياب
+            </button>
+            <button className={styles.addButton} onClick={() => {setShowPopup2(false); openReport(selectedLesson, selectedDate);}}>تقرير</button>
+            
+            <button className={styles.closeButton} onClick={() => setShowPopup2(false)}>
+              إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
+      
+      {/*  قائمة الحضور والغياب */}
+      {showPopup3 && attendances.length > 0 && (
+        <div className={styles.popupOverlay} onClick={() => setShowPopup3(false)}>
+          <div
+            className={styles.popup}
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className={styles.popupTitle}>حضور وغياب</h3>
+            <p style={{color: "gray"}}>التاريخ: {selectedDate}, الدرس: {selectedLesson.name}</p>
 
             {students.length === 0 ? (
               <div className={styles.noEvents}>لا توجد أحداث</div>
@@ -272,6 +308,7 @@ export const Calendar = () => {
                     <th>رقم الهوية</th>
                     <th>اسم الطالب</th>
                     <th>الحضور</th>
+                    <th>ملاحطة</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,15 +322,20 @@ export const Calendar = () => {
                           checked={attendances.find(a => String(a.student) === String(st._id)).status}
                           onChange={(e)=>{
                             const updatedAttendances = attendances.map(a => {
-                              console.log("updatedAttendances for", e.target.checked,  st._id, a.student, a.student == st._id);
                               if(a.student == st._id){
                                 return {...a, status: e.target.checked};
                               }
                               return a;
                             });
-                            console.log("updatedAttendances", updatedAttendances);
                             setAttendances(updatedAttendances);
                           }}/>
+                      </td>
+                      <td>
+                        <input type="text" placeholder="ملاحظات" name="notes" value={st.notes} onChange={()=>setStudents(students.map((s)=>{
+                          if(s._id === st._id){
+                            return {...s, notes: s.notes};
+                          }
+                        }))}/>
                       </td>
                     </tr>
                   ))}
@@ -303,12 +345,13 @@ export const Calendar = () => {
             <button className={styles.addButton} onClick={() => {saveAttendance(selectedLesson, selectedDate);setShowPopup2(false)}}>
               حفظ
             </button>
-            <button className={styles.closeButton} onClick={() => setShowPopup2(false)}>
+            <button className={styles.closeButton} onClick={() => setShowPopup3(false)}>
               إغلاق
             </button>
           </div>
         </div>
       )}
+
     </div>
   );
 };

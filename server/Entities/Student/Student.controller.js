@@ -61,6 +61,13 @@ const buildData = (body) => ({
   mother_name: body.mother_name,
   father_phone: body.father_phone,
   mother_phone: body.mother_phone,
+  father_work: body.father_work,
+  mother_work: body.mother_work,
+  school: body.school,
+  layer: body.layer,
+  health_status: body.health_status || "",
+  notes: body.notes || "",
+  main_teacher: body.main_teacher || null,
 });
 
 
@@ -217,8 +224,14 @@ const generateStudentPDF = async (req, res) => {
       ['الشارع', student.street],
       ['اسم الأب', student.father_name],
       ['هاتف الأب', student.father_phone],
+      ['عمل الأب', student.father_work],
       ['اسم الأم', student.mother_name],
       ['هاتف الأم', student.mother_phone],
+      ['عمل الأم', student.mother_work],
+      ['المدرسة', student.school],
+      ['الصف', student.layer],
+      ['الحالة الصحية', student.health_status],
+      ['ملاحظات', student.notes],
     ]
 
     const infoRows = infoPairs.map(([label, value])=>([

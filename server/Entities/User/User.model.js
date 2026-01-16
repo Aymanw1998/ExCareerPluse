@@ -3,7 +3,22 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { UserInterface } = require('../Person/Person.interface');
 
-const UserSchema = new mongoose.Schema({...UserInterface}, {timestamps: true} );
+const UserSchema = new mongoose.Schema({
+  ...UserInterface,  
+  resetOtpHash: { type: String },
+  resetOtpExpires: { type: Date },
+  resetOtpAttempts: { type: Number, default: 0 },
+  resetOtpLockedUntil: { type: Date },
+  googleDrive: {
+    connected: { type: Boolean, default: false },
+    refreshToken: { type: String },
+    accessToken: { type: String },
+    expiryDate: { type: Number }, // ms timestamp
+    folderId: { type: String },   // תיקייה ב-Drive
+    folderName: { type: String },
+  },
+
+}, {timestamps: true} );
 UserSchema.index({ tz: 1 }, { unique: true });
 // השוואת סיסמה
 UserSchema.methods.comparePassword = function (plain) {
@@ -41,6 +56,6 @@ UserSchema.pre(['findOneAndUpdate', 'updateOne'], async function (next) {
 });
 
 const User = mongoose.model('Users', UserSchema);
-const UserNoActive = mongoose.model('UsersNoActive', UserSchema);
+const UsernoActive = mongoose.model('UsersnoActive', UserSchema);
 const UserWaitingRoom = mongoose.model('UsersWaitingRoom', UserSchema);
-module.exports = {User, UserNoActive, UserWaitingRoom};
+module.exports = {User, UsernoActive, UserWaitingRoom};

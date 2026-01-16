@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // עדכן נתיב אם אצלך שונה:
-import { create, update, getUserById as getOne, /*softDelete,*/ deleteU, uploadPhoto } from "../../WebServer/services/user/functionsUser.jsx";
+import { create, update, getUserById as getOne, /*softDelete,*/ deleteU, uploadPhoto, changeStatus } from "../../WebServer/services/user/functionsUser.jsx";
 import styles from "./User.module.css";
 import { toast } from "../../ALERT/SystemToasts.jsx";
-import {validate as validateINV, submit as submitFromParent} from "../../WebServer/services/inviteToken/functionInviteToken.jsx";
 
-const EditUser = ({parent = false}) => {
+const EditUser = () => {
   const params = useParams();              // "new" או _id
   const navigate = useNavigate();
 
-  const id = parent ? "new" : params.id;
-  const isEdit =!parent && id !== "new";
+  const id = params.id;
+  const isEdit = id !== "new";
   const isNew = !isEdit;
 
   const [form, setForm] = useState({
@@ -49,17 +48,8 @@ const EditUser = ({parent = false}) => {
   const [showPassword, setShowPassword] = useState(false);
 
 
-  // invite token למצב הורה
-  const [inviteToken, setInviteToken] = useState(null);
-  const [inviteStatus, setInviteStatus] = useState({
-    checking: parent,   // אם זה דף הורה – נבדוק טוקן
-    valid: !parent,     // אם זה אדמין – תמיד תקף
-    message: "",
-  });
-
   useEffect(() => {
     if (!isEdit) return;
-    if  (parent) return;
     (async () => {
       try {
         //console.log("load training");
@@ -69,6 +59,7 @@ const EditUser = ({parent = false}) => {
         if(!res.ok) throw new Error(res.message);
         if (res) {
           const s = res.user;
+          s.roles = s.roles.includes("ادارة") ? ["ادارة"] : (s.roles.includes("مرشد") ? ["مرشد"] : ["مساعد"]);
           setForm(s);
           setPhoto(s.photo || "");
         } else {
@@ -81,50 +72,6 @@ const EditUser = ({parent = false}) => {
       }
     })();
   }, [id, isEdit]);
-
-    // 🔹 בדיקת invite token במצב הורה (דף חיצוני)
-  useEffect(() => {
-    if (!parent) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("invite");
-
-    if (!token) {
-      setInviteStatus({
-        checking: false,
-        valid: false,
-        message: "קישור לא תקין (חסר מזהה הרשמה)",
-      });
-      return;
-    }
-
-    setInviteToken(token);
-
-    (async () => {
-      try {
-        setInviteStatus((prev) => ({ ...prev, checking: true }));
-        const res = await validateINV(token);
-        //console.log("validate invite token", res);
-        // נניח שהפונקציה מחזירה { valid, message }
-        if (!res.valid) {
-          setInviteStatus({
-            checking: false,
-            valid: false,
-            message: res?.message || "הקישור אינו תקף",
-          });
-        } else {
-          setInviteStatus({ checking: false, valid: true, message: "" });
-        }
-      } catch (e) {
-        console.error(e);
-        setInviteStatus({
-          checking: false,
-          valid: false,
-          message: "שגיאה בבדיקת הקישור",
-        });
-      }
-    })();
-  }, [parent]);
 
   function isValidIsraeliId(id) {
     if (!/^\d{5,9}$/.test(id)) return false;
@@ -167,7 +114,7 @@ const EditUser = ({parent = false}) => {
           return "תעודת זיהות לא חוקית"
         }
         else if(isNew) {
-          const data = parent ? {ok: false} : await getOne(value)
+          const data = await getOne(value)
           if(data.ok){
             tag?.style.setProperty('border', '2px solid red'); // או ישירות סטייל
             return "תעודת זיהות קיימת במערכת"
@@ -294,30 +241,7 @@ const EditUser = ({parent = false}) => {
       setErr(null);
 
       const payload = { ...form };
-      //console.log("payload", payload);  
-      if(parent && !inviteToken){
-          toast.error("קישור הרשמה לא תקין");
-          return;
-      }
-      else if(parent) {
-        const res = await submitFromParent(inviteToken, payload);
-        //console.log("submit from parent", res);
-        if (!res || !res.ok) {
-          throw new Error(res?.message || "فشل ارسال النموذج");
-        }
-
-        toast.success("✅ تم ارسال تفاصيل المستخدم بنجاح");
-        const res2 = await uploadPhoto(form.tz, photo);
-        if(!res2) return;
-        if(!res2.ok) {
-          toast.warn("لم يتم تحميل صورة المستخدم: " + res2.message);
-        }
-        else{
-          toast.success("✅ تم تحميل صورة المستخدم بنجاح");
-        }
-        // אפשר לנקות טופס, לא מחזירים אחורה
-        return;
-      }
+      
       console.log("isEdit", isEdit);
       const res = isEdit ? await update(form.tz, payload): await create({...payload});
       if(!res) return;
@@ -355,25 +279,18 @@ const EditUser = ({parent = false}) => {
       toast.error(e.message || "❌ فشل العملية");
     }
   };
-  // במצב הורה – קודם בודקים טוקן
-  if (parent) {
-    if (inviteStatus.checking) {
-      return (
-        <div className={styles.formContainer}>
-          בודק תוקף קישור ההרשמה...
-        </div>
-      );
-    }
-    if (!inviteStatus.valid) {
-      return (
-        <div
-          className={styles.formContainer}
-          style={{ color: "#b91c1c", textAlign: "center" }}
-        >
-          <h2>הקישור אינו תקף</h2>
-          <p>{inviteStatus.message || "אנא בקש/י קישור חדש מהמורה."}</p>
-        </div>
-      );
+
+  const sendToRoomNoActive = async () => {
+    if (!isEdit) return;
+    try {
+      const res = await changeStatus(form.tz, "active", "noActive");
+      if(!res) return;
+      if(!res.ok) throw new Error(res.message);
+
+      toast.success("✅ تم غلق الحساب بنجاح");
+      navigate(-1);
+    } catch (e) {
+      toast.error(e.message || "❌ فشل العملية");
     }
   }
 
@@ -422,10 +339,24 @@ const EditUser = ({parent = false}) => {
       <label style={{color: "red"}}>{error.password}</label>
       <br />
       
-      <label>الادوار:</label>
+      {/* <label>الادوار:</label>
         <span><input type="checkbox" name="roles" value="ادارة" checked={form.roles.includes("ادارة")} onChange={(e) => toggleRole(e.target.value, e.target.checked)}/> ادارة</span>
         <span><input type="checkbox" name="roles" value="مرشد" checked={form.roles.includes("مرشد")} onChange={(e) => toggleRole(e.target.value, e.target.checked)}/> مرشد</span>
         <span><input type="checkbox" name="roles" value="مساعد" checked={form.roles.includes("مساعد")} onChange={(e) => toggleRole(e.target.value, e.target.checked)}/> مساعد</span>
+      <br /> */}
+      <label>الادوار:</label>
+      <select
+        name="roles"
+        value={form.roles[0]  || ""}
+        onChange={(e) => {
+          setForm((prev) => ({ ...prev, roles: [e.target.value] }));
+        }}
+      >
+        <option value="ادارة">ادارة</option>
+        <option value="مرشد">مرشد</option>
+        <option value="مساعد">مساعد</option>
+      </select>
+      <label style={{color: "red"}}>{error.roles}</label>
       <br />
       
       
@@ -510,19 +441,22 @@ const EditUser = ({parent = false}) => {
       </div>
 
       <div className={styles.buttonRow} style={{ gap: 8, flexWrap: "wrap" }}>
-        <button type="submit" onClick={handleSubmit}>
-          {saving ? "حفظ..." : parent ? "ارسال التفاصيل" : (isEdit ? "تعديل البيانات" : "اضافة المستخدم")}
+        <button type="submit" onClick={handleSubmit} style={{width:"100%"}}>
+          {saving ? "حفظ..." : (isEdit ? "تعديل البيانات" : "اضافة المستخدم")}
         </button>
-
-        {isEdit && !parent && (
-          <>
-            <button type="button" style={{ background: "#7f1d1d" }} onClick={handleHardDelete}>
-              حذف
+        <br/>
+        {isEdit &&  (
+          <div style={{margin: "0 auto"}}>
+            <button type="button" style={{ background: "#7f1d1d", margin: "10px" }} onClick={handleHardDelete}>
+              {"حذف الحساب"}
             </button>
-          </>
+            <button type="button" style={{ background: "#7f1d1d", margin: "10px" }} onClick={sendToRoomNoActive}>
+              {"غلق الحساب"}
+            </button>
+          </div>
         )}
-
-        {!parent && (<button type="button" style={{ background: "#6b7280" }} onClick={() => navigate(-1)}>
+        <br/>
+        {(<button type="button" style={{ background: "#6b7280", width: "100%" }} onClick={() => navigate(-1)}>
           الرجوع للقائمة
         </button>)}
       </div>

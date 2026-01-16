@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const {User, UserNoActive} = require("../Entities/User/User.model");
+const {User, UsernoActive} = require("../Entities/User/User.model");
 const { removeSubForUser } = require("../Entities/User/User.controller");
 
 const stripTimestamps = (doc) => {
@@ -11,18 +11,18 @@ const haveTraineeWithoutSubs3Month = async() => {
     // 1) להגדיל ספירת "לא פעיל" למתאמנים שאין להם מנוי פעיל
     const incRes = await User.updateMany(
         { role: "מתאמן", $or: [ { "subs.id": { $exists: false } }, { "subs.id": null } ] },
-        { $inc: { countNoActive: 1 } }
+        { $inc: { countnoActive: 1 } }
     );
 
     // 2) לאפס למי שיש מנוי (כדי “לספור” רק תקופות בלי מנוי)
     const resetRes = await User.updateMany(
         { role: "מתאמן", "subs.id": { $ne: null } },
-        { $set: { countNoActive: 0 } }
+        { $set: { countnoActive: 0 } }
     );
 
     // 3) להשבית מי שהגיע ל-3 (שבועות) ולהפוך ל־active:false
     const deactivateRes = await User.updateMany(
-        { role: "מתאמן", active: true, countNoActive: { $gte: 3 } },
+        { role: "מתאמן", active: true, countnoActive: { $gte: 3 } },
         { $set: { active: false } }
     );
 
@@ -40,7 +40,7 @@ const haveTraineeWithoutSubs3Month = async() => {
             const ops = docs.map(d => ({
                 updateOne: {filter: {tz: d.tz}, update: {$setOnInsert: stripTimestamps({ _id: d._id, ...d })}, upsert: true}
             }))
-            await UserNoActive.bulkWrite(ops, {ordered: false, session});
+            await UsernoActive.bulkWrite(ops, {ordered: false, session});
             await User.deleteMany({ _id: { $in: ids } }, { session });
         })
         console.log(`[moveInactive] moved ${docs.length} users`);

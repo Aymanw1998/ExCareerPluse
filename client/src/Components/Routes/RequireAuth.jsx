@@ -1,7 +1,14 @@
-// src/Components/Routes/RequireAuth.jsx
+// RequireAuth.jsx
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL, setAuthTokens } from '../../WebServer/services/api';
+import { scheduleAccessRefresh } from '../../WebServer/utils/accessScheduler';
+import { getAccessExpiryMs } from '../../WebServer/utils/authTiming';
+import { getLogoutDeadline, scheduleAutoLogout } from '../../WebServer/utils/logoutScheduler';
 import { getMe } from '../../WebServer/services/auth/fuctionsAuth';
+
+const SKEW_MS = 60_000;
 
 export default function RequireAuth() {
   const navigate  = useNavigate();
@@ -13,34 +20,52 @@ export default function RequireAuth() {
 
     (async () => {
       try {
-        // 1) בדיקה בסיסית: יש בכלל חיבור?
-        const isLoggedIn = !!localStorage.getItem('isLoggedIn');
-        const token      = localStorage.getItem('accessToken');
+        // 1) בדיקת access מקומי
+        let token = localStorage.getItem("accessToken");
+        const expMs = getAccessExpiryMs(token);
+        const valid = token && expMs && (Date.now() + SKEW_MS < expMs);
 
-        if (!isLoggedIn || !token) {
-          if (!alive) return;
+        // 2) אם לא תקף -> נסה refresh-cookie
+        if (!valid) {
+          try {
+            const { data } = await axios.post(
+              `${API_BASE_URL}/auth/refresh`,
+              {},
+              { withCredentials: true }
+            );
+
+            if (data?.accessToken) {
+              setAuthTokens(data.accessToken, data.expirationTime);
+              scheduleAccessRefresh(data.accessToken);
+
+              const deadline = getLogoutDeadline();
+              if (deadline) scheduleAutoLogout(deadline);
+
+              token = data.accessToken;
+            } else {
+              token = null;
+            }
+          } catch {
+            token = null;
+          }
+        }
+
+        if (!alive) return;
+
+        // 3) אם עדיין אין token -> ללוגין
+        if (!token) {
           navigate('/', { replace: true, state: { from: location } });
           return;
         }
 
-        // 2) שליפת המשתמש
+        // 4) בדיקת משתמש
         const me = await getMe().catch(() => null);
+
         if (!alive) return;
 
         if (!me) {
+          localStorage.removeItem('accessToken');
           navigate('/', { replace: true, state: { from: location } });
-          return;
-        }
-
-        // 3) אם מתאמן וללא מנוי—להפנות לבחירת מנוי, אלא אם כבר שם
-        const hasSub = !!(me.subs && me.subs.id);
-        const isTrainee = me.role === 'מתאמן';
-        console.warn("hasSub", hasSub, "isTrainee", isTrainee);
-        const onSelectSubPage = location.pathname.startsWith('/selectSubfor/');
-        const onQuotationPage = location.pathname === '/quotation'; // אם יש אצלך דף הצעת מחיר ציבורי
-        console.warn("onSelectSubPage", onSelectSubPage, "onQuotationPage", onQuotationPage);
-        if (isTrainee && !hasSub && !onSelectSubPage && !onQuotationPage) {
-          navigate(`/selectSubfor/${encodeURIComponent(me.tz)}`, { replace: true });
           return;
         }
       } finally {
@@ -51,8 +76,6 @@ export default function RequireAuth() {
     return () => { alive = false; };
   }, [location.pathname, navigate]);
 
-  // בזמן הבדיקה לא מרנדרים כלום (אפשר לשים ספינר)
-  if (checking) return null;
-
+  if (checking) return null; // ספינר
   return <Outlet />;
 }

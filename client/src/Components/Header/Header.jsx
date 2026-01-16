@@ -115,7 +115,6 @@ export default function Header() {
           )}
         </div>
         <div className={styles.headerContent}>
-          {/* כפתור המבורגר – מופיע רק במובייל */}
           {isMobile && (
             <button
               className={styles.menuToggle}
@@ -129,35 +128,35 @@ export default function Header() {
               <span />
             </button>
           )}
-          {/* <button onClick={() => {console.log("👋 בדיקה: זה טוסט שאני יצרתי!");
-            push({ variant: "info", description: "👋 בדיקה: זה טוסט שאני יצרתי!" });
-            }}>טוסט בדיקה</button> */}
-          {/* פרטי משתמש (נעלמים במובייל ונכנסים לתפריט) */}
           {user && isMobile && (
             <div className={styles.userBadge}>
-              {user?.firstname + " " + user?.lastname + " - " + user?.roles.includes("ادارة") ? "ادارة" : user?.roles.includes("مرشد") ? "مرشد" : "مساعد مرشد"}
+              {user?.firstname + " " + user?.lastname + " - " + user?.roles[0]}
             </div>
           )}
         </div>
-        {/* כיסוי רקע במובייל בזמן פתיחת תפריט */}
         {isMobile && menuOpen && <div className={styles.backdrop} onClick={() => setMenuOpen(false)} />}
-        {/* יציאה: רק בתוך ההמבורגר במובייל; בדסקטופ נשאר בסרגל */}
         {isMobile ? (
             menuOpen && (
                     <nav style={menuOpen && !isMobile ? {} : {width: "100%"} }className={`${styles.navbarV} ${isMobile ? styles.mobileNav : ''}`} data-open={menuOpen}>
-                      <a href="/calendar" onClick={(e) => onNavClick(e, "/calendar")}>يوميات</a>
+                      <a href="/calendar" onClick={(e) => onNavClick(e, "/calendar")}>حضور وغياب</a>
                       <a href="/students" onClick={(e) => onNavClick(e, "/students")}>قائمة الطلاب</a>
                       <a href="/users" onClick={(e) => onNavClick(e, "/users")}>قائمة المستخدمين</a>
                       <a href="/lessons" onClick={(e) => onNavClick(e, "/lessons")}>قائمة الدروس</a>
+                      <a href="/reports" onClick={(e) => onNavClick(e, "/reports")}>قائمة التقارير</a>
+                      <a href="/profile" onClick={(e) => onNavClick(e, "/profile")}>ملف شخصي</a>
+                      <a href="#" onClick={(e) => onNavClick(e, "#")}>Drive</a>
                       <button onClick={handleLogout} className={styles.logoutButton} title="خروج"> 🔓 خروج</button>
                     </nav>
                 )
         ) : (
             <nav style={{width: "100%"}} className={`${styles.navbarV} ${isMobile ? styles.mobileNav : styles.navbarV}`} data-open={menuOpen}>
-                <a href="/calendar" onClick={(e) => onNavClick(e, "/calendar")}>يوميات</a>
+                <a href="/calendar" onClick={(e) => onNavClick(e, "/calendar")}>حضور وغياب</a>
                 <a href="/students" onClick={(e) => onNavClick(e, "/students")}>قائمة الطلاب</a>
                 <a href="/users" onClick={(e) => onNavClick(e, "/users")}>قائمة المستخدمين</a>
-                <a href="/lessons" onClick={(e) => onNavClick(e, "/lessons")}>قائمة الدروس</a> 
+                <a href="/lessons" onClick={(e) => onNavClick(e, "/lessons")}>قائمة الدروس</a>
+                <a href="/reports" onClick={(e) => onNavClick(e, "/reports")}>قائمة التقارير</a>
+                <a href="/profile" onClick={(e) => onNavClick(e, "/profile")}>ملف شخصي</a>
+                <a href="#" onClick={(e) => onNavClick(e, "#")}>Drive</a>
                 <button onClick={handleLogout} className={styles.logoutButton} title="خروج"> 🔓 خروج</button>
             </nav>
         )}

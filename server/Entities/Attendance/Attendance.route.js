@@ -5,9 +5,11 @@ const router = express.Router();
 const {
   getAll,
   getOne,
+  getAttendancesByQuery,
   getAllByLessonDayMonthYear,
   postOne,
   postByLessonDayMonthYear,
+  getHistory,
   putOne,
   deleteOne,
   deletePerMonth,
@@ -20,12 +22,11 @@ const { requireAuth: protect, requireRole: protectRole } = require('../../middle
 router.use(protect);
 
 // פתוח לכל משתמש מחובר
-router.get('/', getAll);
+router.get('/', getAttendancesByQuery);
+router.get('/history', getHistory);
 router.get('/:id', getOne);
-
 router.get('/:lesson_id/:day/:month/:year', getAllByLessonDayMonthYear);
 router.post('/ByList/:lesson_id/:day/:month/:year', postByLessonDayMonthYear);
-
 // מכאן והלאה — ادارة בלבד
 // router.use(protectRole('ادارة'));
 

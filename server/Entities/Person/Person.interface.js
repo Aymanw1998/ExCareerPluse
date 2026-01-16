@@ -25,7 +25,12 @@ const StudentInterface = {
     mother_name: { type: String, trim: true },
     father_phone: { type: String, trim: true },
     mother_phone: { type: String, trim: true },
-    
+    father_work: { type: String, trim: true },
+    mother_work: { type: String, trim: true },
+    school: { type: String, trim: true },
+    layer: { type: String, trim: true },
+    health_status: { type: String, trim: true, default: "" },
+    notes: { type: String, trim: true, default: "" },
 }
 
 module.exports = {UserInterface, StudentInterface};

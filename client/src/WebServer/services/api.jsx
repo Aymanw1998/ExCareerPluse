@@ -3,7 +3,8 @@ import axios from 'axios';
 import { markSessionExpired } from '../utils/sessionMessages'; // אופציונלי: מציג הודעת "פג תוקף"
 import { getApiBaseUrl } from './apiBase';
 
-export const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = "http://localhost:2025/api";
+//getApiBaseUrl();
   //`${process.env.REACT_APP_SERVER_URI || ''}`.replace(/\/+$/, '') + '/api';
 
 // state פנימי של המודול
@@ -48,8 +49,8 @@ let inited = false;
 export const initApiBase = async () => {
   if (inited) return;
   const baseUrl = await API_BASE_URL;
-  api.defaults.baseURL = baseUrl + '/api';
-  publicApi.defaults.baseURL = baseUrl + '/api';
+  api.defaults.baseURL = baseUrl;
+  publicApi.defaults.baseURL = baseUrl;
   inited = true;
 }
 

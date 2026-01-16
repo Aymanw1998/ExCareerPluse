@@ -8,7 +8,7 @@ function App() {
   useEffect(() => {
     bindAccessTokenRefreshListener();
 
-    const savedAccess = localStorage.getItem('accessToken');
+    const savedAccess = localStorage.getItem("accessToken");
     if (savedAccess) scheduleAccessRefresh(savedAccess);
   }, []);
 

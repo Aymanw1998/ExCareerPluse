@@ -200,7 +200,7 @@
   background: white;
   padding: 20px;
   border-radius: 12px;
-  width: 300px;
+  min-width: 300px;
   animation: popupShow 0.25s ease;
 }
 
@@ -262,7 +262,7 @@
   border-collapse: collapse;
   direction: rtl;
   text-align: right;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .attTable th,

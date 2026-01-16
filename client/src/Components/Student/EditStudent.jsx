@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // עדכן נתיב אם אצלך שונה:
-import { create, update, getOne, /*softDelete,*/ deleteS, uploadPhoto } from "../../WebServer/services/student/functionStudent.jsx";
+import { create, update, getOne, /*softDelete,*/ deleteS, uploadPhoto } from "../../WebServer/services/student/functionsStudent.jsx";
+import {getAll as getUsers} from "../../WebServer/services/user/functionsUser.jsx"
 import styles from "./Student.module.css";
 import { toast } from "../../ALERT/SystemToasts";
 import {validate as validateINV, submit as submitFromParent} from "../../WebServer/services/inviteToken/functionInviteToken.jsx";
@@ -22,12 +23,19 @@ const EditStudent = ({parent = false}) => {
     gender: "",
     phone: "",
     email: "",
-    city: "",
+    city: "الرملة",
     street: "",
     father_name: "",
     mother_name: "",
     father_phone: "",
     mother_phone: "",
+    father_work: "",
+    mother_work: "",
+    school: "",
+    layer: "",
+    health_status: "",
+    notes: "",
+    main_teacher: null,
   });
 
   const [photo, setPhoto] = useState("");
@@ -45,6 +53,12 @@ const EditStudent = ({parent = false}) => {
     mother_name: "",
     father_phone: "",
     mother_phone: "",
+    father_work: "",
+    mother_work: "",
+    school: "",
+    layer: "",
+    health_status: "",
+    notes: "",
   })
 
   const [loading, setLoading] = useState(isEdit);
@@ -273,7 +287,7 @@ const EditStudent = ({parent = false}) => {
     let b = await validate();
     if (b) { toast.warn(b); return; }
     b = true
-    const ff = ['tz', 'firstname', 'lastname', 'birth_date', 'gender', 'phone', 'email', 'city', 'street', 'father_name', 'mother_name', 'father_phone', 'mother_phone'];
+    const ff = ['tz', 'firstname', 'lastname', 'birth_date', 'gender','layer', 'school', 'health_status', 'city', 'street', 'father_name', 'mother_name', 'father_phone', 'mother_phone', 'father_work', 'mother_work'];
     for(const nameTag in ff){
       const tag = document.getElementsByName(ff[nameTag])[0];
       // console.log('tag', tag, tag.name, tag.value);
@@ -291,6 +305,7 @@ const EditStudent = ({parent = false}) => {
       setErr(null);
 
       const payload = { ...form };
+      console.log("data student", payload);
       if(parent && !inviteToken){
           toast.error("קישור הרשמה לא תקין");
           return;
@@ -303,6 +318,7 @@ const EditStudent = ({parent = false}) => {
         }
 
         toast.success("✅ تم ارسال تفاصيل الطالب بنجاح");
+        if(!photo) return;
         const res2 = await uploadPhoto(form.tz, photo);
         if(!res2) return;
         if(!res2.ok) {
@@ -374,108 +390,192 @@ const EditStudent = ({parent = false}) => {
     }
   }
 
+  const [teachers, setTeachers] = useState(null);
+  const loadTeachers = async() => {
+    //teachers
+    try{
+      const res = await getUsers();
+      res.ok ? setTeachers(res.users.filter(u => u.roles[0] == "مرشد")): setTeachers([]);
+    } catch(err) {
+      setTeachers([])
+    }
+  }
+  useEffect(()=>{loadTeachers()},[])
+
   if (loading) return <div className={styles.formContainer}>يتحدث...</div>;
   if (err)      return <div className={styles.formContainer} style={{color:"#b91c1c"}}>{err}</div>;
 
   return (
     <div className={styles.formContainer}>
-      <h2>{isEdit ? "تحديث بيانات الطالب" : "اضافة طالب جديد"}</h2>
+      <h2 style={{textAlign: "center"}}>{isEdit ? "تحديث بيانات الطالب" : "اضافة طالب جديد"}</h2>
 
-      <label>رقم الهوية:</label>
+      <label>رقم الهوية: <span style={{color: "red"}}>*</span></label>
       <input name="tz" value={form.tz} onChange={onField} readOnly={!isNew} />
-      <label style={{color: "red"}}>{error.tz}</label>
+      {error.tz != "" && <label style={{color: "red"}}>{error.tz}</label>}
       <br />
-      <label>اسم الطالب:</label>
+      <label>اسم الطالب: <span style={{color: "red"}}>*</span></label>
       <input
         name="firstname"
         value={form.firstname}
         onChange={handleChange}
         required
       />
-      <label style={{color: "red"}}>{error.firstname}</label>
+      {error.firstname != "" && <label style={{color: "red"}}>{error.firstname}</label>}
       <br />
-      <label>اسم العائلة:</label>
+      <label>اسم العائلة: <span style={{color: "red"}}>*</span></label>
       <input
         name="lastname"
         value={form.lastname}
         onChange={handleChange}
         required
       />
-      <label style={{color: "red"}}>{error.lastname}</label>
+      {error.lastname != "" &&<label style={{color: "red"}}>{error.lastname}</label>}
       <br />
-      <label>اسم الاب:</label>
-      <input
-        name="father_name"
-        value={form.father_name}
-        onChange={handleChange}
-        required
-      />
-      <label style={{color: "red"}}>{error.father_name}</label>
-      <br />
-      <label>اسم الام:</label>
-      <input
-        name="mother_name"
-        value={form.mother_name}
-        onChange={handleChange}
-        required
-      />
-      <label style={{color: "red"}}>{error.mother_name}</label>
-      <br />
-      <label>تاريخ الميلاد:</label>
+
+      <label>تاريخ الميلاد: <span style={{color: "red"}}>*</span></label>
       <input
         name="birth_date"
         type="date"
         value={form.birth_date ? String(form.birth_date).slice(0, 10) : ''}
         onChange={onField}
       />
-      <label style={{color: "red"}}>{error.birth_date}</label>
+      {error.birth_date != "" && <label style={{color: "red"}}>{error.birth_date}</label>}
       <br />
-      <label>جنس:</label>
+      <label>جنس: <span style={{color: "red"}}>*</span></label>
       <select name="gender" value={form.gender} onChange={onField}>
         <option value="">اختار الجنس</option>
         <option value="ذكر">ذكر</option>
         <option value="انثى">انثى</option>
       </select>
-      <label style={{color: "red"}}>{error.gender}</label>
+      {error.gender != "" && <label style={{color: "red"}}>{error.gender}</label>}
       <br />
-      <label>هاتف:</label>
+          <label>هاتف:</label>
       <input
         name="phone"
         value={displayPhoneLocal(form.phone)}
         onChange={(e)=>onPhoneChange('phone', e.target.value)}
         placeholder="052-123-4567"
       />
-      <label style={{color: "red"}}>{error.phone}</label>
+      {error.phone != "" && <label style={{color: "red"}}>{error.phone}</label>}
       <br />
-      <label>هاتف الاب:</label>
+      <label>صف: <span style={{color: "red"}}>*</span></label>
+      <input
+        name="layer"
+        value={form.layer}
+        onChange={handleChange}
+        required
+      />
+      { error.layer != "" && <label style={{color: "red"}}>{error.layer}</label>}
+      <br />
+      <label>مدرسة: <span style={{color: "red"}}>*</span></label>
+      <input
+        name="school"
+        value={form.school}
+        onChange={handleChange}
+        required
+      />
+      {error.school != "" && <label style={{color: "red"}}>{error.school}</label>}
+      <br />
+      <label> الاب <span style={{color: "red"}}>*</span></label>
+      <input
+        name="father_name"
+        value={form.father_name}
+        onChange={handleChange}
+        placeholder="اسم الاب"
+        required
+      />
       <input
         name="father_phone"
         value={displayPhoneLocal(form.father_phone)}
         onChange={(e) => onPhoneChange('father_phone', e.target.value)}
         placeholder="052-123-4567"
       />
-      <label style={{color: "red"}}>{error.father_phone}</label>
+      <input
+        name="father_work"
+        value={form.father_work}
+        onChange={handleChange}
+        placeholder="عمل الاب"
+        required
+      />
+      {error.father_name != "" && <label style={{color: "red"}}>{error.father_name}</label>}
+      {error.father_work != "" && <label style={{color: "red"}}>{error.father_work}</label>}
+      {error.father_phone != "" && <label style={{color: "red"}}>{error.father_phone}</label>}
       <br />
-      <label>هاتف الام:</label>
+      
+      <label> الام <span style={{color: "red"}}>*</span></label>
+      <input
+        name="mother_name"
+        value={form.mother_name}
+        onChange={handleChange}
+        placeholder="اسم الام"
+        required
+      />
       <input
         name="mother_phone"
         value={displayPhoneLocal(form.mother_phone)}
         onChange={(e) => onPhoneChange('mother_phone', e.target.value)}
         placeholder="052-123-4567"
       />
-      <label style={{color: "red"}}>{error.mother_phone}</label>
+      <input
+        name="mother_work"
+        value={form.mother_work}
+        onChange={handleChange}
+        placeholder="عمل الام"
+        required
+      />
+      {error.mother_name != "" && <label style={{color: "red"}}>{error.mother_name}</label>}
+      {error.mother_work != "" && <label style={{color: "red"}}>{error.mother_work}</label>}
+      {error.mother_phone != "" && <label style={{color: "red"}}>{error.mother_phone}</label>}
+      <br />
+      <label>الحالة الصحية: <span style={{color: "red"}}>*</span></label>
+      <input
+        name="health_status"
+        value={form.health_status}
+        onChange={handleChange}
+        required
+      />
+      {error.health_status != "" &&<label style={{color: "red"}}>{error.health_status}</label>}
       <br />
       <label>بريد الكتروني:</label>
       <input name="email" value={form.email} onChange={onField} />
-      <label style={{color: "red"}}>{error.email}</label>
-
-      <label>بلد:</label>
-      <input name="city" value={form.city} onChange={onField} />
-      <label style={{color: "red"}}>{error.city}</label>
-
-      <label>شارع السكن:</label>
+      {error.email !="" && <label style={{color: "red"}}>{error.email}</label>}
+      <br />
+      <label>شارع السكن: <span style={{color: "red"}}>*</span></label>
       <input name="street" value={form.street} onChange={onField} />
-      <label style={{color: "red"}}>{error.street}</label>
+      {error.street != "" && <label style={{color: "red"}}>{error.street}</label>}
+      <br />
+      <label>مدينة السكن: <span style={{color: "red"}}>*</span></label>
+      <input name="city" value={form.city} onChange={onField} />
+      {error.city != "" && <label style={{color: "red"}}>{error.city}</label>}
+      <br />
+      <label>ملاحظات:</label>
+      <input
+        name="notes"
+        value={form.notes}
+        onChange={handleChange}
+        required
+      />
+      {error.notes != "" && <label style={{color: "red"}}>{error.notes}</label>}
+      <br />
+
+      {localStorage.getItem('roles').includes('ادارة') && teachers && teachers.length > 0 && <div className={styles.formControl}>
+        <label>مرشد مسؤول:</label>
+        <select
+          name="main_teacher"
+          value={form.main_teacher}
+          onChange={handleChange}
+          disabled={!localStorage.getItem('roles').includes('ادارة')}
+        >
+          <option value="">اختار مرشد</option>
+          {Array.isArray(teachers) &&
+            teachers.map((t) => (
+              <option key={t._id} value={t._id}>
+                {t.firstname} {t.lastname}
+              </option>
+            ))}
+        </select>
+      </div> }
+      
 
       <div style={{ marginBottom: "16px" }}>
         <label>صورة الطالب:</label>
@@ -489,6 +589,7 @@ const EditStudent = ({parent = false}) => {
             input.click();
           }
         }> {photo != "" ? "تعديل الاختيار" : "اختر صورة"} </button>
+        {photo != "" && <button style={{marginLeft: "18px", backgroundColor: "red"}} onClick={()=>setPhoto("")}>إزالة الصورة</button>}
         <br />
 
         {/* معاينة الصورة إذا موجودة */}

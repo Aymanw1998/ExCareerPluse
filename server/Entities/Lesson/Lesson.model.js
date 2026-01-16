@@ -12,10 +12,15 @@ const schema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, // teacher
         ref: 'Users',
     },
+    helper: {
+        type: mongoose.Schema.Types.ObjectId, // 
+        ref: 'Users', default: undefined,
+    },
     list_students: [{
         type: mongoose.Schema.Types.ObjectId, //students
         ref: 'Students',
     }],
+    room: {type: String, required: true},
     createdAt: {type: Date, default: Date.now},
     updatedAt: {type: Date},
 },{timeseries: false});

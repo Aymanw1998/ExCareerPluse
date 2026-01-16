@@ -25,7 +25,6 @@ root.render(
     <ToastProvider rtl baseZIndex={999999}>
       <App />
 
-      {/* ניטור ברקע */}
       <SystemStatusWatcher
         options={{
           healthUrl: `/health`,
@@ -35,10 +34,8 @@ root.render(
         }}
       />
 
-      {/* אירועים חיים מהשרת */}
-      <SystemEventSubscriber url="/api/events" />
+      {/* <SystemEventSubscriber/> */}
 
-      {/* באדג׳ סטטוס (כבוי בקומפוננטה כברירת מחדל) */}
       <StatusBadge />
 
       <DevToastPing />

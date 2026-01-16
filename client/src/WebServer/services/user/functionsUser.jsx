@@ -8,8 +8,8 @@ const extractUser = (data) => data?.user ?? data ?? null;
 /**
  * 
  * @param {*} tz |  מזהה משתמש (תעודת זהות) 
- * @param {*} from | חדר נוכחי (Active, NoActive, Waiting)
- * @param {*} to  | חדר יעד (Active, NoActive, Waiting)
+ * @param {*} from | חדר נוכחי (Active, noActive, Waiting)
+ * @param {*} to  | חדר יעד (Active, noActive, Waiting)
  * 
  * @returns 
  */
@@ -19,7 +19,7 @@ export const changeStatus = async (tz, from, to) => {
     if (![200,201].includes(status) || !data?.ok) throw new Error('משתמש לא שונה סטטוס');
     return { ok: true, message: data.message};
   }catch(err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   } 
 }
 /** כל המשתמשים */
@@ -29,7 +29,7 @@ export const getAll = async (rooms = null) => {
     if (![200,201].includes(status) || !data?.ok) throw new Error('לא קיים משתמשים');
     return {ok: true, users: data.users};
   } catch(err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -42,7 +42,7 @@ export const getUserById = async (tzOrId, {publicMode = false} = {}) => {
     console.log("getUserById", data);
     return {ok: true, user: data.user};
   } catch (err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -60,7 +60,7 @@ export const create = async (payload, {confirm = true} = {}) => {
     if (![200,201].includes(status) || !data?.ok) throw new Error('לא נוצר משתמש');
     return { ok: true, user: extractUser(data) };
   } catch (err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -77,7 +77,7 @@ export const update = async (tz, petch, {confirm = true} = {}) => {
     if (![200,201].includes(status) || !data?.ok) throw new Error('משתמש לא עודכן');
     return { ok: true, user: extractUser(data.user) };
   } catch (err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -112,7 +112,7 @@ export const deleteU = async (tz, from, {confirm = true} = {}) => {
     if (![200,201].includes(status) || !data?.ok) throw new Error ('משתמש לא נמחק');
     return { ok: true, user: null };
   } catch (err) {
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -125,7 +125,7 @@ export const addSub = async (userId, subId, start, end) => {
     return { ok: true, user: extractUser(data.data) };
   } catch (err) {
     const msg = err?.response?.data?.message || err.message || "שגיאה בהוספת מנוי";
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 
@@ -140,7 +140,7 @@ export const removeSub = async (_userId) => {
     return { ok: true, user: extractUser(data) };
   } catch (err) {
     const msg = err?.response?.data?.message || err.message || "שגיאה בהסרת מנוי";
-    return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+    return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
   }
 };
 

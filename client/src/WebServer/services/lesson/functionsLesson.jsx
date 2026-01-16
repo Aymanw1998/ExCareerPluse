@@ -7,20 +7,31 @@ export const getAllLesson = async() => {
         if(![200,201].includes(status) || !data.ok) throw new Error ('לא קיים שיעורים במערכת');
         return {ok: true, lessons: data.lessons || data.schema || []};
     } catch(err) {    
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 
 export const getOneLesson = async(_id) => {
     try{
-        const {data, status} = await api.get('/lesson/' + _id);
+        const {data, status} = await api.get('/lesson/' + _id, );
         if(![200,201].includes(status) || !data.ok) throw new Error ('השיעור לא קיים');
         return {ok: true, lesson: data.lesson || data.schema};
     } catch(err) {    
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 
+export const getLessonsByQuery = async(params) => {    
+    try{
+    console.log("in func api getLessonsByQuery params", params);
+    const {data, status} = await api.get('/lesson/query', {params});
+        if(![200,201].includes(status) || !data.ok) throw new Error ('يوجد خطأ في جلب البيانات');
+        console.log("getLessonsByQuery", data, status);
+        return {ok: true, lessons: data.lessons || data.schema};
+    } catch(err) {    
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
+    }
+}
 export const createLesson = async(payload, {confirm = true} = {}) => {
     try{
         if(confirm) {
@@ -36,7 +47,7 @@ export const createLesson = async(payload, {confirm = true} = {}) => {
         return {ok: true, lesson: res.data.lesson || res.data.schema};
     } catch(err) {
         console.error(err);
-        return {ok: false, message: err.response.data.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 export const updateLesson = async(_id, payload, {confirm = true} = {}) => {
@@ -52,7 +63,7 @@ export const updateLesson = async(_id, payload, {confirm = true} = {}) => {
         if(![200,201].includes(status) || !data.ok) throw new Error (data?.message || 'השיעור לא עודכן');
         return {ok: true, lesson: data.lesson || data.schema};
     } catch(err) {
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 
@@ -69,7 +80,7 @@ export const deleteLesson = async(_id, {confirm = true} = {}) => {
         if(![200,201].includes(status) || !data.ok) throw new Error (data?.message || 'השיעור לא נמחק');
         return {ok: true, lesson: null};
     } catch(err) {
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 
@@ -82,7 +93,7 @@ export async function addToList(lessonId, traineeIds = []) {
         if (![200,201].includes(status)) throw new Error(data?.message || 'הוסף מתאמן לשיעור נכשלה');
         return {ok: true, lessons: data.lessons || data.schema};
     } catch(err) {
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 
@@ -95,7 +106,7 @@ export async function removeFromList(lessonId, traineeIds = []) {
         if (![200,201].includes(status)) throw new Error(data?.message || 'הסרת מתאמן משיעור נכשלה');
         return {ok: true, lessons: data.lessons || data.schema};
     } catch(err) {
-        return {ok: false, message: err.response.data.message || err.message || 'נוצר שגיאה בתהליך'};
+        return {ok: false, message: err.response.data.message || err.message || 'حدث خطأ أثناء العملية.'};
     }
 }
 

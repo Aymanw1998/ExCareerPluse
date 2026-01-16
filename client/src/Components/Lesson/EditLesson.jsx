@@ -10,7 +10,7 @@ import {
 import styles from './EditLesson.module.css';
 import { toast } from '../../ALERT/SystemToasts';
 
-import { getAll as getAllS} from '../../WebServer/services/student/functionStudent';
+import { getAll as getAllS} from '../../WebServer/services/student/functionsStudent';
 import { getAll as getAllU } from '../../WebServer/services/user/functionsUser';
 const EditLesson = () => {
   
@@ -32,12 +32,16 @@ const EditLesson = () => {
       endMin:   hhFromUrl*60 + 45,
     },
       teacher: '', 
+      helper: '',
+      room: '-1',
       list_students: [],
   });
   const [error, setError] = useState({
     name: '',
     date: { day: '', startMin: '', endMin: '' },
     teacher: '',
+    helper: '',
+    room: '',
     list_students: [],
   });
 
@@ -70,9 +74,11 @@ const EditLesson = () => {
     });
   };
   const [students, setStudents] = useState([]);
-  console.log("students", students);
+  useEffect(()=>console.log("students", students),[students]);
   const [teachers, setTeachers] = useState([]);
-  console.log("teachers", teachers);
+  useEffect(()=>console.log("teachers", teachers),[teachers]);
+  const [helpers, setHelpers] = useState([]);
+  useEffect(()=>console.log("helpers", helpers),[helpers]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTerm2, setSearchTerm2] = useState('');
   const [showTraineeModal, setShowTraineeModal] = useState(false);
@@ -103,6 +109,21 @@ const EditLesson = () => {
     catch(err){
       console.error(err.message)
     }
+
+    try {
+      const usersRes = await getAllU();
+      console.log("usersRes", usersRes);
+      if (usersRes?.ok) {
+        const allUsers = usersRes.users || [];
+        setHelpers(allUsers.filter((u) => u.roles.includes('مساعد')));
+        // setTrainers(allUsers.filter((u) => u.role === 'מאמן'));
+      } else{
+        throw new Error(usersRes?.message)
+      }
+    }
+    catch(err){
+      console.error(err.message)
+    }
     try{
       // לא חובה, אבל משאירים אם תרצה שימוש עתידי
       // await getAllLesson();
@@ -111,7 +132,7 @@ const EditLesson = () => {
         const resL = await getOneLesson(id);
         if(!resL.ok) throw new Error(resL.message);
         const l = resL.lesson;
-        console.log("l", l);
+        console.log("llllllllll", l);
         if (l) {
           setLesson({...l, list_students: l.list_students.filter(t => t != null && t != undefined)});
         } else {
@@ -140,7 +161,7 @@ const EditLesson = () => {
   // שינוי שדות
   const handleChange = (e) => {
     const { name, value } = e.target;
-
+    console.log(name, value);
     if (name === 'day' || name === 'hh') {
       setLesson((prev) => ({
         ...prev,
@@ -188,8 +209,8 @@ const EditLesson = () => {
     try {
       const resL =
         id === 'new'
-          ? await createLesson({...lesson, ...{teacher: localStorage.getItem("user_id")}})
-          : await updateLesson(id,{...lesson,...{teacher: localStorage.getItem("user_id")}});
+          ? await createLesson(lesson)
+          : await updateLesson(id,lesson);
       
       if (!resL) return;
       if (resL.ok) {
@@ -253,21 +274,7 @@ const EditLesson = () => {
           placeholder="הכנס שם שיעור"
           disabled={!localStorage.getItem('roles').includes('ادارة')}
         />
-        {/* <select
-          name="name"
-          value={lesson.name}
-          onChange={handleChange}
-          disabled={!localStorage.getItem('roles').includes('ادارة')}
-        >
-          <option value="">בחר אימון</option>
-          {trainings.length > 0 &&
-            trainings.map((t) => (
-              <option key={t._id} value={t.name}>
-                {t.name}
-              </option>
-            ))}
-        </select> */}
-
+        
         <label style={{color: "red"}}>{error.name}</label>
       </div>
 
@@ -289,20 +296,26 @@ const EditLesson = () => {
         </select>
         <label style={{color: "red"}}>{error.teacher}</label>
       </div> }
-{/* 
-      <div className={styles.formControl}>
-        <label htmlFor="max_trainees">כמות משתתפים מקסימלית:</label>
-        <input
-          type="number"
-          id="max_trainees"
-          name="max_trainees"
-          value={lesson.max_trainees}
+        
+      {helpers.length > 0 && <div className={styles.formControl}>
+        <label>مساعد:</label>
+        <select
+          name="helper"
+          value={lesson.helper}
           onChange={handleChange}
-          min="1"
-          disabled={localStorage.getItem('role') !== 'ادارة'}
-        />
-        <label style={{color: "red"}}>{error.max_trainees}</label>
-      </div> */}
+          disabled={!localStorage.getItem('roles').includes('ادارة')}
+        >
+          <option value="">اختار مساعد</option>
+          {Array.isArray(helpers) &&
+            helpers.map((t) => (
+              <option key={t._id} value={t._id}>
+                {t.firstname} {t.lastname}
+              </option>
+            ))}
+        </select>
+        <label style={{color: "red"}}>{error.helper}</label>
+      </div> }
+
       <div className={styles.formControl}>
         <label>اختر يوم للدرس:</label>
         <select
@@ -312,6 +325,25 @@ const EditLesson = () => {
           disabled={!localStorage.getItem('roles').includes('ادارة')}
         >
           {['الاحد', 'الاثنين', 'الثلاثاء', 'الاربعاء', 'الخميس','الجمعة','السبت'].map((d, i) => (
+            <option value={i+1} key={i+1}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <label style={{color: "red"}}>{error.date.day}</label>
+      </div>
+
+
+      <div className={styles.formControl}>
+        <label>اختر غرفة للدرس:</label>
+        <select
+          name="room"
+          value={lesson.room}
+          onChange={handleChange}
+          disabled={!localStorage.getItem('roles').includes('ادارة')}
+        >
+          <option value="">اختار غرفة</option>
+          {Array.from({length: 6}, (_, i)=>i+1).map((d, i) => (
             <option value={i+1} key={i+1}>
               {d}
             </option>

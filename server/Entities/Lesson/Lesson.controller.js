@@ -45,6 +45,8 @@ const buildLessonData = (body) => {
         name: body.name,
         date: { day, startMin, endMin },
         teacher: body.teacher || null,
+        helper: body.helper || null,
+        room: body.room || "-1",
         list_students: Array.isArray(body.list_students) ? body.list_students : [],
     };    
 };
@@ -52,18 +54,8 @@ const buildLessonData = (body) => {
 
 const getAll = async(req, res) => {
     try {
-        // תמיכה פילטרים אופציונליים: ?year=2025&month=8 (1..12)
-        const { year, month } = req.query;
-        let filter = {};
-        if (year && month) {
-            const y = Number(year), m = Number(month);
-            if (!Number.isNaN(y) && !Number.isNaN(m)) {
-                const start = new Date(y, m - 1, 1);
-                const end   = new Date(y, m, 1);
-                filter.created = { $gte: start, $lt: end };
-            }
-        }
-        const lessons = await Lesson.find(filter).populate('teacher', 'tz firstname lastname role').lean();
+        // תמיכה פילטרים אופציונליים: ?day=1,....,7&teacher=
+        const lessons = await Lesson.find().lean();
         return res.status(200).json({ ok: true, lessons });
     } catch (err) {
         logWithSource("err", err);
@@ -74,10 +66,10 @@ const getAll = async(req, res) => {
 const getOne = async (req, res) => {
     try {
         const { id } = req.params;
+        const {day, teacher} = req.query;
         if (!mongoose.Types.ObjectId.isValid(id))
         return res.status(400).json({ ok: false, message: 'invalid id' });
-
-        const lesson = await Lesson.findById(id).populate('teacher','tz firstname lastname role');
+        const lesson = await Lesson.findById(id)
         if (!lesson) return res.status(404).json({ ok: false, message: 'לא נמצא' });
 
         lesson.num_in_list = (lesson.list_students || []).length;
@@ -85,6 +77,36 @@ const getOne = async (req, res) => {
     } catch (err) {
         logWithSource("err", err);
         return res.status(500).json({ ok: false, message: err.message });
+    }
+}
+
+const getLessonsByQuery = async (req, res) => {
+    try{
+        console.log("in func api getLessonsByQuery", req.query);
+        const{search, day, teacher, helper,} = req.query;
+        const filter = {};
+        if(day !== undefined) filter["date.day"] = Number(day);
+        if(teacher) filter["teacher"] = teacher;
+        if(helper)  filter["helper"]  = helper;
+        console.log(filter);
+        const [items, total] = await Promise.all([
+            Lesson.find(filter)
+                .populate("teacher", "_id tz firstname lastname roles")
+                .populate("helper", "_id tz firstname lastname roles")
+        ])
+        return res.status(201).json({
+            ok: true,
+            lessons: items,
+            pagination: {
+                total,
+            },
+        });
+
+    }
+    catch(err) {
+        return res.status(500).json({
+            ok: false, message: "يوجد خطأ في جلب البيانات المطلوبة"
+        })
     }
 }
 const postOne = async(req, res) => {
@@ -122,12 +144,13 @@ const putOne = async(req, res) => {
         if (!current) return res.status(404).json({ ok:false, message:'לא נמצא' });
 
         const next = buildLessonData({ ...current.toObject(), ...req.body });
-
+        
         const changedSlot =
             next.date.day      !== current.date.day      ||
             next.date.startMin !== current.date.startMin ||
             next.date.endMin   !== current.date.endMin   ||
-            String(next.teacher) !== String(current.teacher);
+            next.teacher       !== current.teacher ||
+            next.helper       !== current.helper;
 
         if (changedSlot) {
             const sameDay = await Lesson.find({
@@ -144,12 +167,16 @@ const putOne = async(req, res) => {
             }
         }
 
+        console.log("current", current);
+        console.log("next", next);
         current.name           = next.name;
         current.date.day       = next.date.day;
         current.date.startMin  = next.date.startMin;
         current.date.endMin    = next.date.endMin;
         current.teacher        = next.teacher;
+        current.helper         = next.helper;
         current.list_students  = next.list_students;
+        current.room           = next.room;
         current.updatedAt      = new Date();
 
         await current.save();
@@ -317,6 +344,8 @@ const copyMonth = async (req, res) => {
           endMin,
         },
         teacher: src.teacher,
+        helper: src.helper,
+        room: src.room,
         list_students: keepTrainees ? (src.list_students || []) : [], // אפשר לאפס
         createdAt: new Date(),
         updatedAt: null,
@@ -350,4 +379,4 @@ const deletePerMonth = async(req, res) => {
     }
 };
 
-module.exports = {getAll, getOne, postOne, putOne, deleteOne, addToList, removeFromList, copyMonth, deletePerMonth}
+module.exports = {getAll, getOne, postOne, putOne, deleteOne, addToList, removeFromList, copyMonth, deletePerMonth, getLessonsByQuery}

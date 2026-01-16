@@ -7,11 +7,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import { login, getMe } from '../../../WebServer/services/auth/fuctionsAuth';
 import { toast } from '../../../ALERT/SystemToasts';
+import ForgotPassword from '../ForgotPassword/ForgotPassword';
 
 export default function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [showPopup, setShowPopup] = useState(false);
     const [tz, setTz] = useState('');
     const [password, setPassword] = useState('');
     const [loading,  setLoading]  = useState(false);
@@ -30,7 +32,7 @@ export default function LoginPage() {
     }
     const handleLogin = async(e)=> {
         if(tz == "" || password == ""){
-            toast.warn("יש שדות ריקות");
+            toast.warn("الرجاء ملء جميع الحقول.");
             return;
         }
         setLoading(true);
@@ -43,11 +45,11 @@ export default function LoginPage() {
             }
 
             // נווט חזרה לנתיב המבוקש או לדאשבורד
-            const from = location.state?.from?.pathname || '/dashboard/get';
+            const from = location.state?.from?.pathname || '/calendar';
             navigate(from, { replace: true });
         } catch (err) {
             console.error('Login error:', err?.response?.data || err.message);
-            toast.error(err?.response?.data?.message || err.message || 'נכשלת התחברות, נסה שוב');
+            toast.error(err?.response?.data?.message || err.message || 'فشل تسجيل الدخول. الرجاء المحاولة مرة أخرى.');
         } finally {
         setLoading(false);
         }
@@ -63,15 +65,24 @@ export default function LoginPage() {
             <div className={styles.rightPanel}>
                 <div className={styles.loginForm}>
                     <div className={`${styles.logo} ${styles.logoDisNone}`}><img src={LogoIMG}/></div>
-                    <h2>התחברות</h2>
-                    <input ref={tzRef} name="tz" type="text" placeholder="תעודת זיהות" value={tz} onChange={(e)=>setTz(e.target.value)} onKeyDown={handleKeyDown} required />
-                    <input ref={passwordRef} name="password" type="password" placeholder="סיסמה" value={password} onChange={(e)=>setPassword(e.target.value)} onKeyDown={handleKeyDown} required />
-                    <button type="submit" style={{backgroundColor: "#88f388ff", color: "#000"}} onClick={handleLogin}>{loading ? '...' : 'כניסה'}</button>
-                    {/* <a href='/quotation'>בדיקת הצעת מחיר לרישום מהיום הזה</a> */}
+                    <h2>سجل الدخول</h2>
+                    <input ref={tzRef} name="tz" type="text" placeholder="رقم الهوية" value={tz} onChange={(e)=>setTz(e.target.value)} onKeyDown={handleKeyDown} required />
+                    <input ref={passwordRef} name="password" type="password" placeholder="كلمة المرور" value={password} onChange={(e)=>setPassword(e.target.value)} onKeyDown={handleKeyDown} required />
+                    <a href="#" onClick={(e)=>{e.preventDefault(); setShowPopup(true);}}>نسيت كلمة المرور؟</a>
+                    <button type="submit" style={{backgroundColor: "#88f388ff", color: "#000"}} onClick={handleLogin}>{loading ? '...' : 'أدخل'}</button>
                     <hr />
-                    <button type="submit" style={{backgroundColor: "#4cfdfdff", color: "#000"}} onClick={()=>navigate("/register")}>{loading ? '...' : 'רישום משתמש חדש למערכת'}</button>
+                    <button type="submit" style={{backgroundColor: "#4cfdfdff", color: "#000"}} onClick={()=>navigate("/register")}>{'تسجل كمستخدم'}</button>
                 </div>
             </div>
+
+            {showPopup && (
+                    <div className={styles.popupOverlay} onClick={() => setShowPopup(false)}>
+                    <div className={styles.popup} dir="rtl" onClick={(e) => e.stopPropagation()}>
+                        <ForgotPassword />
+                        <button className={styles.closeButton} onClick={() => setShowPopup(false)}>إغلاق</button>
+                    </div>
+                    </div>
+            )}
         </div>
     )
 }

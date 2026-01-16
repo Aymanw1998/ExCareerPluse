@@ -2,34 +2,11 @@
 const { logWithSource } = require("../../middleware/logger");
 const Attendance = require("./Attendance.model")
 const mongoose = require("mongoose");
-
-function toDate(value) {
-    if (!value) return null;
-    if (value instanceof Date) return value;
-    if (typeof value === 'number') return new Date(value);
-
-    if (typeof value === 'string') {
-        const s = value.trim();
-
-        // dd-mm-yyyy או dd/mm/yyyy
-        let m = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
-        if (m) {
-        const [, dd, mm, yyyy] = m.map(Number);
-        return new Date(Date.UTC(yyyy, mm - 1, dd)); // UTC כדי להימנע מהפתעות שעון קיץ
-        }
-
-        // yyyy-mm-dd (ISO קצר)
-        m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (m) {
-        const [, yyyy, mm, dd] = m.map(Number);
-        return new Date(Date.UTC(yyyy, mm - 1, dd));
-        }
-
-        const ts = Date.parse(s);
-        if (!Number.isNaN(ts)) return new Date(ts);
-    }
-    return null; // לא תקין
-}
+const toDateKey = (ymd) => {
+  // ymd: "YYYY-MM-DD"
+  const [y, m, d] = ymd.split("-").map(Number);
+  return y * 10000 + m * 100 + d;
+};
 
 const toInt = (value, defaultValue = 0) => Number.isFinite(Number(value)) ? Number(value) : defaultValue;
 const clamp = (num, min, max) => Math.min(min, Math.min(num, max));
@@ -46,6 +23,7 @@ const buildData = (body) => {
         day: body.day, // 0=Sun..6=Sat
         month: body.month, // 0..1439
         year: body.year, // 0..1439
+        notes: body.notes || "",
     };    
 };
 
@@ -53,23 +31,54 @@ const buildData = (body) => {
 const getAll = async(req, res) => {
     try {
         // תמיכה פילטרים אופציונליים: ?year=2025&month=8 (1..12)
-        const { year, month } = req.params;
+        const { year, month, day } = req.params;
         let filter = {};
         if (year && month) {
-            const y = Number(year), m = Number(month);
-            if (!Number.isNaN(y) && !Number.isNaN(m)) {
-                const start = new Date(y, m - 1, 1);
-                const end   = new Date(y, m, 1);
+            
+            const y = Number(year), m = Number(month), d = Number(day);
+            if (!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)) {
+                filter["dateKey"] = year * 10000 + month * 100 + day;
+
                 filter.created = { $gte: start, $lt: end };
             }
         }
+        console.log(year, )
         const attendances = await Attendance.find(filter).lean();
+        
         return res.status(200).json({ ok: true, attendances });
     } catch (err) {
         logWithSource("err", err);
         return res.status(500).json({ ok: false, message: err.message });
     }
 }
+
+// GET /api/attendance?lessonId=&from=&to=&search=&page=&limit=
+const getAttendancesByQuery = async (req, res) => {
+    try {
+        const { lessonId, year, month, day} = req.query;
+
+        const filter = {};
+        if (lessonId) filter.lesson = lessonId;
+        if(!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)){
+            filter.dateKey = Number(year) * 10000 + Number(month) * 100 + Number(day);
+        }
+        
+        const [items, total] = await Promise.all([
+            Attendance.find(filter).select("student status notes")
+            .lean(),
+            Attendance.countDocuments(filter),
+        ]);
+        
+        res.json({
+        ok: true,
+        attendances: items,
+        total: total,
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
+};
+
 
 const getOne = async (req, res) => {
     try {
@@ -104,32 +113,35 @@ const getAllByLessonDayMonthYear = async (req, res) => {
 }
 const postOne = async(req, res) => {
     try {
-        console.log("body".yellow, req.body);
-        const model = buildData(req.body);
-        console.log("model".green, model);
-        if (!model?.name || !model?.lesson) {
-            return res.status(400).json({ ok: false, message: 'missing required fields' });
+
+        const { lessonId, studentId, year, month, day, status, notes } = req.body;
+
+        if (!lessonId || !studentId || !year || !month || !day) {
+        return res.status(400).json({ ok: false, message: "missing fields" });
         }
 
-        // חיפוש חפיפה באותו יום/חודש/שנה ולאותו מאמן
-        const sameDay = await Attendance.find({
-        'day':   model.date.day,
-        'month': model.date.month,
-        'year':  model.date.year,
-        lesson: model.lesson,
-        }).lean();
+        const dateKey = Number(year) * 10000 + Number(month) * 100 + Number(day);
 
-        const conflict = sameDay.some(l => overlap(model.startMin, model.endMin, l.startMin, l.endMin));
-        if (conflict) {
-            return res.status(409).json({ ok:false, message:'יש חפיפה בשעות האלה' });
-        }
-        const doc = await Attendance.create({ ...model });
-        return res.status(201).json({ ok:true, attendance: doc });
-    } catch (err) {
-        logWithSource("err", err);
-        return res.status(500).json({ ok: false, message: err.message });
+        const doc = await Attendance.findOneAndUpdate(
+        { lesson: lessonId, student: studentId, dateKey },
+        {
+            lesson: lessonId,
+            student: studentId,
+            year: Number(year),
+            month: Number(month),
+            day: Number(day),
+            dateKey,
+            status: status,
+            notes: notes || "",
+        },
+        { new: true, upsert: true }
+        ).populate("student", "firstname lastname");
+
+        return res.json({ ok: true, attendance: doc });
+    } catch (e) {
+        return res.status(500).json({ ok: false, message: e.message });
     }
-}
+};
 
 const postByLessonDayMonthYear = async (req, res) => {
     try {        
@@ -150,6 +162,7 @@ const postByLessonDayMonthYear = async (req, res) => {
                 day: Number(day),
                 month: Number(month),
                 year: Number(year),
+                notes: item.notes,
             });
             console.log("model".green, model);
             const existing = await Attendance.findOne({
@@ -161,6 +174,7 @@ const postByLessonDayMonthYear = async (req, res) => {
             });
             if (existing) {
                 // עדכון קיים
+                existing.notes = model.notes;
                 existing.status = model.status;
                 existing.updatedAt = new Date();
                 await existing.save();
@@ -273,4 +287,41 @@ const deletePerMonth = async(req, res) => {
     }
 };
 
-module.exports = {getAll, getOne, getAllByLessonDayMonthYear, postOne, postByLessonDayMonthYear, putOne, deleteOne, deletePerMonth}
+// GET /api/attendance/history?studentId=&lessonId=&from=2026-01-01&to=2026-01-31
+const toKey = (y, m, d) => y * 10000 + m * 100 + d;
+
+const getHistory = async (req, res) => {
+    try {
+        console.log("search attendance");
+        const { studentId, lessonId, from, to, status } = req.query;
+
+        const filter = {};
+
+        if (studentId) filter.student = studentId;
+        if (lessonId) filter.lesson = lessonId;
+        if (status) filter.status = status;
+
+        if (from || to) {
+        filter.dateKey = {};
+        if (from) {
+            const [fy, fm, fd] = from.split("-").map(Number);
+            filter.dateKey.$gte = toKey(fy, fm, fd);
+        }
+        if (to) {
+            const [ty, tm, td] = to.split("-").map(Number);
+            filter.dateKey.$lte = toKey(ty, tm, td);
+        }
+        }
+        console.log("search filter", filter);
+        const list = await Attendance.find(filter)
+        .populate("student", "firstname lastname")  // حسب موديل الطالب عندك
+        .populate("lesson", "name")                 // حسب موديل الدرس عندك
+        .sort({ dateKey: -1, lesson: 1 });
+
+        return res.json({ ok: true, attendances: list });
+    } catch (e) {
+        return res.status(500).json({ ok: false, message: e.message });
+    }
+};
+
+module.exports = {getAll, getOne, getHistory, getAttendancesByQuery, getAllByLessonDayMonthYear, postOne, postByLessonDayMonthYear, putOne, deleteOne, deletePerMonth}

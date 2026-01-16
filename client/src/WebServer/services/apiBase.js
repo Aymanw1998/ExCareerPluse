@@ -33,9 +33,11 @@ export const getApiBaseUrl = async() => {
     console.log("Probing candidates:", CANDIDATES.map(f=>f()));
     try{
         const first = await Promise.any(attempts);
-        console.log("server url", first);
+        console.log("first server url", first);
         return first;
     } catch{
-        throw new Error("No API server found on LAN");
+        console.error("No API server found on LAN");
+        return "http://localhost:2025";
+        //throw new Error("No API server found on LAN");
     }
 }

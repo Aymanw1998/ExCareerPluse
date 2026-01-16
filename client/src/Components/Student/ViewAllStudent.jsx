@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 // עדכן את הנתיב לפי המבנה שלך:
-import { generateStudentPDF, getAll, update, /*softDelete fallback: deleteS */ } from "../../WebServer/services/student/functionStudent.jsx";
+import { generateStudentPDF, getAll, update, /*softDelete fallback: deleteS */ } from "../../WebServer/services/student/functionsStudent.jsx";
 import styles from "./Student.module.css";
 
 import Fabtn from "../Global/Fabtn/Fabtn"
@@ -42,7 +42,7 @@ const ViewAllStudent = () => {
       const data = res.students;
       if (data && data.length > 0) {
         console.log("getAllStudent", data)
-        const filtered = data;
+        const filtered = localStorage.getItem("roles").includes("مرشد") ? data.filter(s => s.main_teacher == localStorage.getItem("user_id")) : data;
         setStudents(filtered);
       } else {
         setStudents([]);
@@ -138,7 +138,7 @@ const ViewAllStudent = () => {
   return (
     <div>
       <div >
-        <h1 style={{ textAlign: "center"}}>قائمة الطلاب</h1>
+        <h1 style={{ textAlign: "center"}}>{localStorage.getItem("roles").includes("ادارة") ? "قائمة الطلاب" : "قائمة طلابي"}</h1>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
@@ -204,8 +204,8 @@ const ViewAllStudent = () => {
                       style={{ marginLeft: 8, backgroundColor: 'green', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }}
                       onClick={()=>changeStatusStudent(t.tz)}>قبول</button>
                     <button style={{ marginLeft: 8, backgroundColor: 'red', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }}>رفض</button></>}
-                    <button style={{ backgroundColor: 'blue', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
-                    onClick={() => generateStudentPDF(t.tz)}>تحميل ملف الطالب</button>
+                    {/* <button style={{ backgroundColor: 'blue', padding: '0.5rem 1rem', borderRadius: '0.5rem', color: 'white', alignItems: "center" }} 
+                    onClick={() => generateStudentPDF(t.tz)}>تحميل ملف الطالب</button> */}
                   </td>
                 </tr>
               ))

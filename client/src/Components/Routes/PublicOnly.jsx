@@ -30,7 +30,7 @@ export default function PublicOnly() {
 
     (async () => {
       // 1) יש access בתוקף?
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
       const expMs = getAccessExpiryMs(token);
       const valid = token && expMs && (Date.now() + SKEW_MS < expMs);
 
@@ -42,7 +42,7 @@ export default function PublicOnly() {
         if (deadline) scheduleAutoLogout(deadline);
 
         navigatingRef.current = true;
-        navigate('/dashboard/get', { replace: true });
+        navigate('/calendar', { replace: true });
         return;
       }
 
@@ -62,7 +62,7 @@ export default function PublicOnly() {
           if (deadline) scheduleAutoLogout(deadline);
 
           navigatingRef.current = true;
-          navigate('/dashboard/get', { replace: true });
+          navigate('/calendar', { replace: true });
           return;
         }
       } catch {

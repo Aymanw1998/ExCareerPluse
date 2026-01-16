@@ -27,6 +27,7 @@ app.use(logger);
 //Connect to DB
 connectDB();
 
+
 // VERY TOP, right after app = express()
 // מומלץ דרך ENV כדי שלא תצטרך לקמפל מחדש
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -36,6 +37,8 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
       'https://fitness-360.onrender.com', // הקליינט בפרודקשן
       'http://10.0.0.30:3000',
       'http://192.168.169.221:3000',
+      'http://tamheed-ramla.org:3000',
+      'http://www.tamheed-ramla.org:3000',
       // הוסף כאן דומיינים נוספים אם יש
       /^http:\/\/10\.0\.0\.\d+3000$/, // רשת LAN לדיבוג
     ];
@@ -62,9 +65,15 @@ app.use(express.json());
 //Cookie parser when login user the token is saved in the server and send to http client
 app.use(cookieParser());
 //Prevent attects
-app.use(helmet({ crossOriginResourcePolicy: false })); // לא לחסום משאבים cross-origin
+app.use(helmet({ 
+    frameguard: false, // ⬅️ קריטי ל-OnlyOffice
+  crossOriginResourcePolicy: false })); // לא לחסום משאבים cross-origin
+
 app.use(mongoSanitize()); // Sanitize data for privent NoSql injection attack
 app.use(xss()); // Prevent XSS attacks
+
+// **********************************GOOGLE DRIVE ***************************
+app.use('/api/google', require('./Entities/Drive/google.route'));
 
 // Routes
 app.use('/api/lesson', require('./Entities/Lesson/Lesson.route'));
@@ -73,6 +82,9 @@ app.use('/api/auth', require('./Entities/User/Auth.route'))
 app.use('/api/attendance', require('./Entities/Attendance/Attendance.route'))
 app.use('/api/student', require('./Entities/Student/Student.route'))
 app.use('/api/inviteToken', require('./Entities/InviteToken/InviteToken.route'))
+app.use('/api/report', require('./Entities/Report/Report.route'));
+app.use('/api/doc', require('./Entities/Doc/Doc.route'));
+app.use('/api/onlyoffice', require('./Entities/OnlyOffice/OnlyOffice.route'));
 // **********************************AUTO_PROCCESS ***************************
 const cron = require("node-cron");
 const { runDailyJobs } = require("./utils/daily");
@@ -201,6 +213,7 @@ app.get('/api/boom', (req, res, next) => {
 
 // ⬅️ שים לפני error handler הראשי
 app.use(errorPublisher);
+app.use(require("express").json({ limit: "50mb" }));
 
 // **********************************END - ALERTS POPUP***************************
 const httpServer = http.createServer(app)

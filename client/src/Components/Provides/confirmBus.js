@@ -3,10 +3,10 @@ let _askImpl = null;
 
 // פריסטים נוחים
 const PRESETS = {
-  navigate: { title: 'יציאה', message: 'האם אתה בטוח שברצונך לציאת מדף שיש בו שינוי מידע ?(אישור מהווה יציאה בלי עדכון)', confirmText: 'אישור', cancelText: 'בטל'},
-  create:   { title: 'יצירה', message: 'האם אתה בטוח שברצונך ליצור?', confirmText: 'צור',  cancelText: 'בטל' },
-  change:   { title: 'שינוי', message: 'האם אתה בטוח שברצונך לשמור שינוי?', confirmText: 'שמור', cancelText: 'בטל' },
-  delete:   { title: 'מחיקה', message: 'האם אתה בטוח שברצונך למחוק?', confirmText: 'מחק', cancelText: 'בטל', danger: true },
+  navigate: { title: 'خروج من الصفحة', message: 'هل أنت متأكد من رغبتك في الخروج من الصفحة؟ توجد تغييرات لم يتم حفظها، وسيؤدي إلى دون تحديث البيانات', confirmText: 'نعم', cancelText: 'الغاء'},
+  create:   { title: 'إنشاء', message: 'هل أنت متأكد من رغبتك في إنشاء هذا العنصر؟', confirmText: 'نعم',  cancelText: 'الغاء' },
+  change:   { title: 'تغيير', message: 'هل أنت متأكد من حفظ التغييرات؟', confirmText: 'نعم', cancelText: 'الغاء' },
+  delete:   { title: 'حذف', message: 'هل أنت متأكد من حذف هذا العنصر؟', confirmText: 'نعم', cancelText: 'الغاء', danger: true },
 };
 
 // מגדיר את פונקציית ה-confirm שמגיעה מה-Provider (דרך ה-Bridge)

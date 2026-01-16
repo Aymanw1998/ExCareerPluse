@@ -5,6 +5,7 @@ const router = express.Router();
 const {
   getAll,
   getOne,
+  getLessonsByQuery,
   postOne,
   putOne,
   deleteOne,
@@ -22,8 +23,8 @@ router.use(protect);
 
 // פתוח לכל משתמש מחובר
 router.get('/', getAll);
+router.get('/query', getLessonsByQuery)
 router.get('/:id', getOne);
-
 // פעולות שקשורות לרשימות/שיבוצים (מחוברים בלבד)
 router.post('/addToList/:id', addToList);
 router.post('/removeFromList/:id', removeFromList);
